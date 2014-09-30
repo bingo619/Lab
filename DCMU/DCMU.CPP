@@ -1,3 +1,6 @@
+/* 
+ * Last Updated at [2014/9/24 11:08] by wuhao
+ */
 #include "DCMU.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -38,9 +41,12 @@ void DCMU::run1()
 {
 	allPtIndex.drawGridLine(Gdiplus::Color::Green, md);
 	//网格聚类
-	int index = 54;
+	int index = 38;
 	gridClustering();
-	//denoiser.run(ptIndexes[index]);
+	denoiser.run(ptIndexes[index]);
+	
+	/**********************************************************/
+	/*test code starts from here*/
 	for (int i = 0; i < ptIndexes.size(); i++)
 	{
 		int count = 0;
@@ -51,16 +57,20 @@ void DCMU::run1()
 				count += ptIndexes[i]->grid[row][col]->size();
 			}
 		}
-		if (count > 50000)
+		if (count > 10000)
 		{
-			cout << i << ": " << count <<endl;
+			cout << i << ": " << count << endl;
 			//system("pause");
 		}
 	}
+	/*test code ends*/
+	/**********************************************************/
+	
+	
 
-	ptMover.run(ptIndexes[index]);
-	ptMover.drawPoints();
-	return;
+	//ptMover.run(ptIndexes[index]);
+	//ptMover.drawPoints();
+	//return;
 	//降噪
 	// 	for (int i = 0; i < ptIndexes.size(); i++)
 	// 	{
@@ -80,6 +90,12 @@ void DCMU::run1()
 	//生成路段
 	RoadGenerator rg;
 	rg.run(ptIndexes[index], ptCluster.clusters);
+}
+
+void DCMU::run2()
+{
+	denoiser.runEx(&allPtIndex);
+	denoiser.drawPts(md);
 }
 
 
@@ -149,7 +165,7 @@ void DCMU::dfs(int row, int col, bool** dfsState, vector<pair<int, int>>& connec
 	if (dfsState[row][col])
 		return;
 	else
-	{
+	{  
 		dfsState[row][col] = true;
 		if (allPtIndex.grid[row][col]->size() <= 3) //网格里点数量小于一定程度的忽略
 			return;

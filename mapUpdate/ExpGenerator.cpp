@@ -1,7 +1,15 @@
+/*
+* Last Updated at [2014/9/24 11:07] by wuhao
+*/
 #include "ExpGenerator.h"
 
 void ExpGenerator::genExpData()
 {
+	//////////////////////////////////////////////////////////////////////////
+	///生成实验数据
+	///1）两次地图匹配后的区域内所有的轨迹点
+	///2）1中匹配失败的轨迹点
+	//////////////////////////////////////////////////////////////////////////
 	//输出所有经过两次匹配后的轨迹
 	for (int i = 0; i < inputFileNames.size(); i++)
 	{
@@ -21,7 +29,7 @@ void ExpGenerator::genExpData(string rawTrajFilePath)
 	//第一次使用原地图匹配
 	cout << ">> 进行第一次地图匹配" << endl;
 	doMM(&originalRoadNetwork, trajsInArea, mmThres);
-	
+
 	//将结果存入每个pt的mmRoadId2字段
 	for each(Traj* traj in trajsInArea)
 	{
@@ -35,9 +43,68 @@ void ExpGenerator::genExpData(string rawTrajFilePath)
 	cout << ">> 进行第二次地图匹配" << endl;
 	doMM(&roadNetwork, trajsInArea, mmThres);
 
-	outputNewTrajs(trajsInArea); 
+	outputNewTrajs(trajsInArea);
 	deleteList(trajsInArea);
 	//dumpTo(trajsInArea, doneTrajs);
+}
+
+void ExpGenerator::genSubSampledData(int interval, string folder, string fileName)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///对原采样轨迹数据,路径为folder+fileName，进行subsample,输出文件名为interval_fileName，在程序根目录下
+	///[注意]只适用于新加坡数据，原采样间隔为30s
+	///interval只能选60,90，120这三个值
+	//////////////////////////////////////////////////////////////////////////
+	char buffer[20];
+	_itoa_s(interval, buffer, 10);
+	string outPath = buffer;
+	outPath += "_" + fileName;
+	cout << outPath << endl;
+	ifstream ifs(folder + fileName);
+	ofstream ofs(outPath);
+	if (!ifs)
+	{
+		cout << "open" << folder + fileName << "error" << endl;
+		system("pause");
+	}
+	if (!ofs)
+	{
+		cout << "open " << outPath << " error!" << endl;
+		system("pause");
+	}
+	ofs << fixed << showpoint << setprecision(8);
+	int flag = 0;
+	int step = interval / 30 + 1;
+	if (interval != 60 && interval != 90 && interval != 120)
+	{
+		cout << "interval param error!" << endl;
+		system("pause");
+	}
+
+	while (ifs)
+	{
+		double lat, lon;
+		int time, mmRoadId;
+		ifs >> time;
+		if (ifs.fail())
+			break;
+		if (time == -1)
+		{
+			ofs << -1 << endl;
+			flag = 0;
+			continue;
+		}
+		else
+		{
+			ifs >> lat >> lon >> mmRoadId;
+			if (flag == 0)
+				ofs << time << " " << lat << " " << lon << " " << mmRoadId << endl;
+			flag++;
+			flag %= step;
+		}
+	}
+	ofs.close();
+	ifs.close();
 }
 
 void ExpGenerator::extractUnmatchedTrajs()
@@ -59,7 +126,7 @@ void ExpGenerator::extractUnmatchedTrajs()
 		{
 			if (pt->mmRoadId == -1) //留下那些第一次匹配就失败的点
 			{
-			//system("pause");
+				//system("pause");
 				ofs << pt->time << " " << pt->lat << " " << pt->lon << " " << -1 << endl;
 				lastOutputIsNegative1 = false;
 			}

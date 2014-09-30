@@ -442,7 +442,7 @@ double PolylineGenerator::getRadius()
 
 void PolylineGenerator::initialization()
 {
-	sampling(1000);
+	sampling(500);
 	polyline.clear();
 	n = pts.size();
 	r = getRadius();

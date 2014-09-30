@@ -1,6 +1,10 @@
+/*
+* Last Updated at [2014/9/24 11:06] by wuhao
+*/
 #pragma once
 #include <iostream>
 #include <string>
+#include <stdlib.h>
 #include <fstream>
 #include <iomanip>
 #include "GeoPoint.h"
@@ -28,9 +32,10 @@ public:
 	list<Traj*> trajsInArea;
 	list<Traj*> doneTrajs;
 
-	
+
 	//driver func	
 	void genExpData();
+	void genSubSampledData(int interval, string folder, string fileName);
 	void deleteForGeo();
 	void deleteType1();
 	void deleteType2();
@@ -39,8 +44,8 @@ public:
 
 	void setArea(Area* area);
 	//void dumpToFile(list<GeoPoint*>& source, string filename);
-	
-	
+
+
 
 private:
 	void genExpData(string rawTrajFilePath);
@@ -57,59 +62,3 @@ private:
 	double limitDist = 400;
 	double limitTime = 100;
 };
-
-/*void genExperimentData()
-{
-	//////////////////////////////////////////////////////////////////////////
-	///第一次匹配：原地图
-	///第二次匹配：随机删除若干条路的地图
-	///输出：除了第一次和第二次匹配都失败的轨迹外的所有轨迹
-	//////////////////////////////////////////////////////////////////////////
-
-	string mm1stPath = "D:\\trajectory\\singapore_data\\experiments\\wy_MMTrajs1.txt";
-	string mm2ndPath = "D:\\trajectory\\singapore_data\\experiments\\wy_MMTrajs2.txt";
-	ifstream mm1Ifs(mm1stPath);
-	ifstream mm2Ifs(mm2ndPath);
-	ofstream ofs("wy_MMTrajs_exp.txt");
-	ofs << fixed << showpoint << setprecision(8);
-	bool lastOutputIsNegative1 = false;
-	while (mm1Ifs)
-	{
-		double lat, lon;
-		int time, mmRoadId1, mmRoadId2;
-		mm1Ifs >> time;
-		mm2Ifs >> time;
-		if (time != -1)
-		{ 
-			mm1Ifs >> lat >> lon >> mmRoadId1;
-			mm2Ifs >> lat >> lon >> mmRoadId2;
-		}
-		if (mm1Ifs.fail() | mm2Ifs.fail())
-			break;
-		if (time == -1 && !lastOutputIsNegative1)
-		{
-			ofs << -1 << endl;
-			lastOutputIsNegative1 = true;
-		}
-		if (time != -1)
-		{
-			if (mmRoadId1 != -1)
-			{
-				ofs << time << " " << lat << " " << lon << " " << mmRoadId2 << endl;
-				lastOutputIsNegative1 = false;
-			}
-			else
-			{
-				if (!lastOutputIsNegative1)
-				{
-					ofs << -1 << endl;
-					lastOutputIsNegative1 = true;
-				}
-			}
-		}
-	}
-	mm2Ifs.close();
-	mm1Ifs.close();
-}*/
-
-

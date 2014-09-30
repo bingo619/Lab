@@ -90,6 +90,19 @@ void Denoiser::calLMD(GeoPoint* pt, int k, double kNNThresholdM)
 	}
 	lmd /= kNNSet.size();
 	pt->lmd = lmd;
+	
+	/**********************************************************/
+	/*test code starts from here*/
+	double maxDist = -1;
+	for (int i = 0; i < kNNSet.size(); i++)
+	{
+		if (kNNSet[i]->dist > maxDist);
+		maxDist = kNNSet[i]->dist;
+	}
+	pt->lmd = maxDist;
+	/*test code ends*/
+	/**********************************************************/
+	
 }
 
 void Denoiser::outlierValidation(GeoPoint* pt, int gridRange, double supportRatio)
@@ -210,6 +223,142 @@ void Denoiser::updatePtIndex(PointGridIndex* ptIndex)
 				}
 				else
 				iter++;
+			}
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+int Denoiser::calDensity(GeoPoint* pt)
+{
+	vector<GeoPoint*> nearPts;
+	ptIndex->getNearPts(pt, r, nearPts);
+	return (nearPts.size() + 1);
+}
+
+int Denoiser::calDensity(double lat, double lon)
+{
+	GeoPoint tempPt(lat, lon);
+	vector<GeoPoint*> nearPts;
+	ptIndex->getNearPts(&tempPt, r, nearPts);
+	return nearPts.size();
+}
+
+pair<int, double> Denoiser::findMaxDensity(GeoPoint* pt)
+{
+	double currentL = 0, currentArc = 0;
+	int maxDensity = -1;
+	double maxL;
+	while (currentL <= L)
+	{
+		currentArc = 0;
+		double angleStep = arcStep / L;
+		double currentAngle = 0;
+		while (currentArc < 2 * PI * currentL)
+		{
+			double deltaX = r * cos(currentAngle) / GeoPoint::geoScale;
+			double deltaY = r * sin(currentAngle) / GeoPoint::geoScale;
+			int density = calDensity(pt->lat + deltaY, pt->lon + deltaX);
+			//printf("lat = %lf, lon = %lf\n", pt->lat + deltaY, pt->lon + deltaX);
+			//pt->print();
+			//printf("density = %d\n", density);
+			//system("pause");
+			if (maxDensity < density)
+			{
+				maxDensity = density;
+				maxL = currentL;
+			}
+			currentAngle += angleStep;
+			currentArc += arcStep;
+		}
+		currentL += LStep;
+	}
+	if (maxDensity == -1)
+	{
+		cout << "density = -1!" << endl;
+		system("pause");
+	}
+	//cout << "maxdensity = " << maxDensity << endl;
+	//system("pause");
+	return make_pair(maxDensity, maxL);
+}
+
+void Denoiser::outlierValidationEx(GeoPoint* pt)
+{
+	if (pt->lmd < 3.0)
+	{
+		pt->isOutlier = 0;
+		return;
+	}
+	//pt->isOutlier = 1;
+	//return;
+	int density = calDensity(pt);
+	pair<int, double> tempPair = findMaxDensity(pt);
+	double maxL = tempPair.second;
+	//printf("density = %d\n", density);
+	//system("pause");
+	int maxDensity = tempPair.first;
+	
+	/*double ratio = (double)maxDensity / (double)density;
+	if (ratio > 5)
+	{
+		pt->isOutlier = 1;
+	}
+	return;*/
+	if (density < 5)
+	{
+		pt->isOutlier = 1;
+	}
+	if (maxL > 15)
+	{
+		pt->isOutlier = 1;
+	}
+	return;
+
+	double prob = 1 - pow((double)density / (double)maxDensity, (maxL - 10.0) / 2.0);
+	cout << "prob = " << prob << endl;
+	cout << "maxL = " << maxL << endl;
+	cout << "density = " << density << endl;
+	cout << "maxDensity = " << maxDensity << endl;
+	cout << (double)density / (double)maxDensity << endl;
+	system("pause");
+	double randVal = ((double)rand()) / (double)RAND_MAX;
+	if (randVal < prob)
+	{
+		pt->isOutlier = 1;
+	}
+}
+
+void Denoiser::runEx(PointGridIndex* _ptIndex)
+{
+	this->ptIndex = _ptIndex;
+	int count = 0;
+	int k = 10;
+	double kNNThresholdM = 3;
+
+	for (int row = 0; row < ptIndex->gridHeight; row++)
+	{
+		for (int col = 0; col < ptIndex->gridWidth; col++)
+		{
+			for each (GeoPoint* pt in *(ptIndex->grid[row][col]))
+			{
+				calLMD(pt, k, kNNThresholdM);
+			}
+		}
+	}
+	printf("LMD计算完成\n");
+	for (int row = 0; row < ptIndex->gridHeight; row++)
+	{
+		for (int col = 0; col < ptIndex->gridWidth; col++)
+		{
+			for each (GeoPoint* pt in *(ptIndex->grid[row][col]))
+			{
+				if (count % 1000 == 0)
+				{
+					cout << "已处理" << count << endl;
+				}
+				outlierValidationEx(pt);
+				count++;
 			}
 		}
 	}

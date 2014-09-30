@@ -29,7 +29,8 @@ void PtCluster::run(PointGridIndex* _ptIndex)
 //////////////////////////////////////////////////////////////////////////
 void PtCluster::calPtsDirs()
 {
-	double d = 4.0; //矩形宽度
+	//double d = 4.0; //矩形宽度
+	double d = 10.0; //矩形宽度
 	double l = 36.0; //矩形长度
 	double angleStep = PI / 24; //角度枚举粒度
 	//将所有点放入pts
@@ -202,7 +203,9 @@ Cluster* PtCluster::genOneCluster(int clusterId, GeoPoint* seedPt, double distTh
 
 void PtCluster::doDirCluster()
 {
-	double distThresM = 15;
+	//double distThresM = 15;
+	//double angleThres = 20.0 / 180.0 * PI;
+	double distThresM = 18;
 	double angleThres = 20.0 / 180.0 * PI;
 	int currentClusterId = clusters.size();
 	int count = 1;

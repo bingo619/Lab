@@ -1,3 +1,6 @@
+/* 
+ * Last Updated at [2014/9/24 11:08] by wuhao
+ */
 #include "RoadGenerator.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -8,7 +11,7 @@ void RoadGenerator::run(PointGridIndex* _allPtIndex, vector<Cluster*>& _clusters
 	this->allPtIndex = _allPtIndex;
 	this->clusters = _clusters;
 	genAllPolyLines();
-	//doRefinement();
+	doRefinement();
 	drawAllPolylines();
 }
 
@@ -381,22 +384,49 @@ GeoPoint* RoadGenerator::intersectCheck(GeoPoint* p1, GeoPoint* p2, vector<GeoPo
 		//printf("val1 = %.8lf, val2 = %.8lf, _val1 = %.8lf, _val2 = %.8lf\n", val1, val2, _val1, _val2);
 		/*test code ends*/
 		/**********************************************************/
-
-		if (val1 * val2 < 1e-4 && _val1 * _val2 <= 1e-4)
+		if ((abs(A) < eps && abs(_A) < eps) || (abs(B) < eps && abs(_B) < eps))
+		{
+			continue;
+		}
+		if ((abs(val1) < eps && abs(val2) < eps) || (abs(_val1) < eps && abs(_val2) < eps))
+			continue;
+		if (val1 * val2 < eps && _val1 * _val2 <= eps)
 		{
 			//cal intersection			
 			double intersectY = (A * _C - _A * C) / (_A * B - A * _B);
-			double intersectX = (-B * intersectY - C) / A;
-
+			double intersectX;
+			if (abs(A) < 1e-7)
+			{
+				intersectX = (-_B * intersectY -_C) / _A;
+			}
+			else
+				intersectX = (-B * intersectY - C) / A;
+			
 			intersectX /= rate;
 			intersectY /= rate;
 
 			GeoPoint* intersection = new GeoPoint(intersectY, intersectX);
+			
+			/**********************************************************/
+			/*test code starts from here*/
+			if (isnan(intersectX) || isnan(intersectY) || isinf(intersectX) || isinf(intersectY))
+			{
+				printf("intersectX = %lf, intersectY = %lf\n", intersectX, intersectY);
+				p1->print();
+				p2->print();
+				printf("A = %.8lf, B = %.8lf, C = %.8lf\n", A, B, C);
+				printf("_A = %.8lf, _B = %.8lf, _C = %.8lf\n", _A, _B, _C);
+				printf("_x1 = %.8lf, _y1 = %.8lf, _x2 = %.8lf, _y2 = %.8lf\n", _x1, _y1, _x2, _y2);
+				printf("val1 = %.8lf, val2 = %.8lf, _val1 = %.8lf, _val2 = %.8lf\n", val1, val2, _val1, _val2);
+				system("pause");
+			}
+			/*test code ends*/
+			/**********************************************************/
+			
 			return intersection;
 		}
 	}
 	return NULL;
-
 }
 
 void RoadGenerator::refineOnePolyline(Cluster* objectCluster)
@@ -405,7 +435,7 @@ void RoadGenerator::refineOnePolyline(Cluster* objectCluster)
 	///
 	//////////////////////////////////////////////////////////////////////////
 	vector<GeoPoint*> newPolyline;
-	double thresholdM = 30;  //如果当前扫描距离超过thresholdM则不切断
+	double thresholdM = 50;  //如果当前扫描距离超过thresholdM则不切断
 
 	//find front cut point
 	double currentLength = 0; //记录当前扫描距离
@@ -495,7 +525,6 @@ void RoadGenerator::refineOnePolyline(Cluster* objectCluster)
 				newPolyline.push_back(intersection_s);
 			else
 				newPolyline.push_back(objectCluster->polyline[i]);
-
 		}
 	}
 	else if (intersection_s == NULL && intersection_e != NULL) //只切尾不切头
@@ -505,7 +534,10 @@ void RoadGenerator::refineOnePolyline(Cluster* objectCluster)
 			if (i > intersectAfter_e)
 				continue;
 			else if (i == intersectAfter_e)
+			{
+				newPolyline.push_back(objectCluster->polyline[i]);
 				newPolyline.push_back(intersection_e);
+			}
 			else
 				newPolyline.push_back(objectCluster->polyline[i]);
 		}
@@ -518,6 +550,7 @@ void RoadGenerator::refineOnePolyline(Cluster* objectCluster)
 		if (intersectAfter_s >= intersectAfter_e)
 		{
 			printf("异常：intersectAfter_s = %d, intersectAfter_e = %d\n", intersectAfter_s, intersectAfter_e);
+			return;
 		}
 		for (int i = 0; i < objectCluster->polyline.size(); i++)
 		{
@@ -526,7 +559,10 @@ void RoadGenerator::refineOnePolyline(Cluster* objectCluster)
 			else if (i == intersectAfter_s)
 				newPolyline.push_back(intersection_s);
 			else if (i == intersectAfter_e)
+			{
+				newPolyline.push_back(objectCluster->polyline[i]);
 				newPolyline.push_back(intersection_e);
+			}
 			else
 				newPolyline.push_back(objectCluster->polyline[i]);
 		}

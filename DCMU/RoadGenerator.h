@@ -1,3 +1,6 @@
+/* 
+ * Last Updated at [2014/9/24 11:08] by wuhao
+ */
 #pragma once
 #include "GeoPoint.h"
 #include "PtCluster.h"

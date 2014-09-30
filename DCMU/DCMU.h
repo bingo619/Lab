@@ -1,3 +1,6 @@
+/* 
+ * Last Updated at [2014/9/24 11:08] by wuhao
+ */
 #pragma once
 #include <iostream>
 #include "GeoPoint.h"
@@ -21,6 +24,7 @@ public:
 	vector<PointGridIndex*> ptIndexes;
 	void run();
 	void run1();
+	void run2();
 
 private:
 	//gird partition

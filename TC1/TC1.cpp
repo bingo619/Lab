@@ -23,9 +23,10 @@
 using namespace std;
 
 //Area area(1.294788, 1.327723, 103.784667, 103.825200); //small
-//Area area(1.294788, 1.393593, 103.784667, 103.906266); //big1
+Area area(1.294788, 1.393593, 103.784667, 103.906266); //big1
 //Area area(1.343593, 1.442398, 103.784667, 103.906266); //big2
-Area area(1.294788, 1.393593, 103.704667, 103.826266); //big3
+//Area area(1.294788, 1.393593, 103.704667, 103.826266); //big3
+string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area1\\";
 
 int size = 15000;
 //some switches
@@ -3171,7 +3172,7 @@ void main()
 
 	
 //=======================================initialization start========================================//
-	string trajPath = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area3\\newMMTrajs_unmatched.txt";
+	string trajPath = workspaceFolder + "120_newMMTrajs_unmatched.txt";
 	
 	md.setArea(&area);
 	md.setResolution(size);
@@ -3197,7 +3198,7 @@ void main()
 
 	roadNetwork.setArea(&area);
 	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\", 50);
-	roadNetwork.deleteEdges("D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area3\\deletedEdges.txt");
+	roadNetwork.deleteEdges(workspaceFolder + "deletedEdges.txt");
 	printf("\n");
 /*¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡üinitialization end¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü*/
 	
