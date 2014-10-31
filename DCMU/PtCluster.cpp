@@ -30,8 +30,6 @@ void PtCluster::run(PointGridIndex* _ptIndex)
 void PtCluster::calPtsDirs()
 {
 	//double d = 4.0; //矩形宽度
-	double d = 10.0; //矩形宽度
-	double l = 36.0; //矩形长度
 	double angleStep = PI / 24; //角度枚举粒度
 	//将所有点放入pts
 	for (int row = 0; row < ptIndex->gridHeight; row++)
@@ -48,8 +46,8 @@ void PtCluster::calPtsDirs()
 	int count = 1;
 	for each (GeoPoint* pt in pts)
 	{
-		//if (count % tenPercent == 0)
-		//	printf("计算点方向 %d0%% 已完成\n", count / tenPercent);
+		if (count % tenPercent == 0)
+			printf("计算点方向 %d0%% 已完成\n", count / tenPercent);
 		calDir(pt, angleStep, d, l);
 		count++;
 	}
@@ -95,7 +93,14 @@ void PtCluster::calDir(GeoPoint* p0, double angleStep, double d, double l)
 	///angleStep为最小角度粒度，方向范围为[0,π)
 	///方向存入p0的direction域中
 	//////////////////////////////////////////////////////////////////////////
-
+	
+	/**********************************************************/
+	/*test code starts from here*/
+//	if (p0->mmRoadId != roadId)
+	//	return;
+	/*test code ends*/
+	/**********************************************************/
+	
 	vector<GeoPoint*> nearPts;
 	ptIndex->getNearPts(p0, sqrt(d / 2 * d / 2 + l*l), nearPts);
 	vector<int> countVec;
@@ -205,8 +210,6 @@ void PtCluster::doDirCluster()
 {
 	//double distThresM = 15;
 	//double angleThres = 20.0 / 180.0 * PI;
-	double distThresM = 18;
-	double angleThres = 20.0 / 180.0 * PI;
 	int currentClusterId = clusters.size();
 	int count = 1;
 	int tenPercent = pts.size() / 10;

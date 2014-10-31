@@ -17,11 +17,13 @@ public:
 	GeoVerification(Map& roadNetwork); //已废弃
 	GeoVerification(){};
 	void verificate(vector<Figure*>& genFigures, MapDrawer& md);
+	void verificate_MI(vector<Figure*>& genFigures, MapDrawer& md);
 
 private:
 	vector<Edge*> delEdges_oneway;
 	vector<pair<double, double> > matchedGenFiguresLength; //记录生成的路段上已被匹配的长度
 	bool verificateOneSegment(Segment segment, vector<Figure*>& genFigures);
+	bool verificateOneSegment_MI(Segment segment, vector<Figure*>& genFigures);
 	void clipEdges(vector<Edge*>& delEdges);
 	//Map roadNetwork;
 	double thresholdM = 20.0; //匹配阈值，找不到距离segment小于25m的路的认为匹配失败

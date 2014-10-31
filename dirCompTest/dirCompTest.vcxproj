@@ -11,9 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{18D97B44-DFAB-46A8-800F-91BA352B815B}</ProjectGuid>
+    <ProjectGuid>{184DC9FD-BC49-47FF-9F52-8F1FE25D2EAA}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>GeoVerification</RootNamespace>
+    <RootNamespace>dirCompTest</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -78,21 +78,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="GeoMain.cpp" />
-    <ClCompile Include="GeoPoint.cpp" />
-    <ClCompile Include="GeoVerification.cpp" />
-    <ClCompile Include="Map.cpp" />
-    <ClCompile Include="MapDrawer.cpp" />
-    <ClCompile Include="TrajReader.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="GeoPoint.h" />
-    <ClInclude Include="GeoVerification.h" />
-    <ClInclude Include="Map.h" />
-    <ClInclude Include="MapDrawer.h" />
-    <ClInclude Include="StringOperator.h" />
-    <ClInclude Include="TrajDrawer.h" />
-    <ClInclude Include="TrajReader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

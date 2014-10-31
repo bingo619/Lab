@@ -22,13 +22,15 @@
 #define INFINITE 999999999
 using namespace std;
 
+//Area area(1.26883, 1.27636, 103.79013, 103.80016); //port
 //Area area(1.294788, 1.327723, 103.784667, 103.825200); //small
-Area area(1.294788, 1.393593, 103.784667, 103.906266); //big1
+//Area area(1.294788, 1.393593, 103.784667, 103.906266); //big1
 //Area area(1.343593, 1.442398, 103.784667, 103.906266); //big2
-//Area area(1.294788, 1.393593, 103.704667, 103.826266); //big3
-string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area1\\";
+Area area(1.294788, 1.393593, 103.704667, 103.826266); //big3
+string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area3\\";
+//string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\port area\\";
 
-int size = 15000;
+int size = 5000;
 //some switches
 bool zoomed = true;
 bool doExtendAndOutput = true;
@@ -44,7 +46,7 @@ double limitDist = 400; //轨迹点之间超过300m的prune掉
 double limitTime = 100; //采样间隔大于60秒的prune掉
 
 //grid index
-int gridWidth = 1200;
+int gridWidth = 300;
 int gridHeight;
 double gridSizeDeg;
 list<IndexedTraj*> **grid = NULL;
@@ -62,6 +64,7 @@ vector<Cluster*> clusters;
 
 //split
 int outputFileIndex = 0;
+string outputRoadPath; //输出道路路径，for SZQ
 
 /**********************************************************/
 /*test code starts from here*/
@@ -2388,6 +2391,33 @@ void doCluster(vector<IndexedTraj*>& trajs)
 }
 
 	//core
+void outputTrajs_SZQ(list<Traj*>& trajs, string filePath, int count = INF )
+{
+	ofstream ofs(filePath);
+	if (!ofs)
+	{
+		cout << "open " << filePath << " error!" << endl;
+		system("pause");
+	}
+	ofs << fixed << showpoint << setprecision(8);
+	int currentCount = 0;
+	for (list<Traj*>::iterator trajIter = trajs.begin(); trajIter != trajs.end(); trajIter++)
+	{
+		if (currentCount == count)
+		{
+			break;
+		}
+		for (Traj::iterator ptIter = (*trajIter)->begin(); ptIter != (*trajIter)->end(); ptIter++)
+		{
+			ofs << (*ptIter)->lon << " " << (*ptIter)->lat << " "<< endl;
+		}
+		ofs << "#" << endl;
+		currentCount++;
+	}
+	cout << ">> " << currentCount << " trajs have been output to " << filePath << endl;
+	ofs.close();
+}
+
 void core()
 {
 	//////////////////////////////////////////////////////////////////////////
@@ -2529,6 +2559,7 @@ void core_v2()
 	roadNetwork.drawMap(Gdiplus::Color::Blue, md);
 	drawAllGennedEdges();
 	TrajReader::outputTrajs(gennedEgdes, "roads_wy.txt");
+	//outputTrajs_SZQ(gennedEgdes, outputRoadPath);
 	roadNetwork.drawMap(Gdiplus::Color::Blue, md);
 	//drawClusteredTrajs();
 }
@@ -3159,20 +3190,14 @@ void mFirstClust()
 	
 }
 
-
-void initialize()
-{
-
-}
-
-void main()
+void main_for_exp()
 {
 	int startTime = clock();
 	srand((unsigned)time(NULL));
 
 	
 //=======================================initialization start========================================//
-	string trajPath = workspaceFolder + "120_newMMTrajs_unmatched.txt";
+	string trajPath = workspaceFolder + "30_newMMTrajs_unmatched.txt";
 	
 	md.setArea(&area);
 	md.setResolution(size);
@@ -3298,6 +3323,14 @@ void main()
 	//tReader.readTrajs(tempTrajs, 800000);
 	readStdTrajs(trajPath, trajs);
 	cout << "traj's size = " << trajs.size() << endl;
+	int days;
+	cout << "days = ";
+	cin >> days;
+	int trajCount = double(trajs.size() * days) / 15.0;
+	trajs.clear();
+	readStdTrajs(trajPath, trajs, trajCount);
+	cout << "traj's size = " << trajs.size() << endl;
+	
 //////////////////////////////////////////////////////////////////////////////////
 
 	//eyeballTest();
@@ -3395,4 +3428,104 @@ void main()
 	int endTime = clock();
 	cout << "running time: " << (endTime - startTime) / 1000.0 << "s" << endl;
 	system("pause");
+}
+
+void main_for_SZQ(string trajPath, string mapPath, string _outputRoadPath)
+{
+	int startTime = clock();
+	srand((unsigned)time(NULL));
+	//=======================================initialization start========================================//
+	outputRoadPath = _outputRoadPath;
+
+	//读轨迹
+	readStdTrajs(trajPath, trajs);
+	TrajReader tr(trajPath);
+	tr.readTrajs(tempTrajs);
+
+	cout << "traj's size = " << trajs.size() << endl;
+	//计算area
+	double minLat = 999;
+	double maxLat = -1;
+	double minLon = 999;
+	double maxLon = -1;
+	for (int i = 0; i < trajs.size(); i++)
+	{
+		for each (GeoPoint* pt in *trajs[i]->traj)
+		{
+			if (pt->lat < minLat) minLat = pt->lat;
+			if (pt->lat > maxLat) maxLat = pt->lat;
+			if (pt->lon < minLon) minLon = pt->lon;
+			if (pt->lon > maxLon) maxLon = pt->lon;
+		}
+	}
+	double delta = 0.001;
+	area.setArea(minLat - delta, maxLat + delta, minLon - delta, maxLon + delta);
+
+	md.setArea(&area);
+	md.setResolution(size);
+
+	roadNetwork.setArea(&area);
+	roadNetwork.openOld(mapPath, 50);
+	//roadNetwork.deleteEdges(workspaceFolder + "deletedEdges.txt");
+	createGridIndex(createGridIndexForOneTraj);
+	printf("\n");
+	/*↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑initialization end↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑*/
+
+	//////////////////////////////////////////////////////////////////////////
+	///Core Part
+	//////////////////////////////////////////////////////////////////////////
+	//drawing part
+	cout << ">> start drawing..." << endl;
+	md.newBitmap();
+	md.lockBits();
+	drawGridLine(Gdiplus::Color::Green);
+	//md.drawMap(Gdiplus::Color::Blue, mapFilePath);
+	core_v2();
+	
+	/**********************************************************/
+	/*test code starts from here*/
+	//TrajDrawer::drawTrajs(tempTrajs, md, Gdiplus::Color::Red);
+	/*test code ends*/
+	/**********************************************************/
+	
+	roadNetwork.drawMap(Gdiplus::Color::Blue, md);
+	//drawClusteredTrajs();	
+	md.unlockBits();
+
+
+	string pngName = "SZQ.png";
+	md.saveBitmap(pngName);
+	cout << ">> drawing finished, output to " + pngName << endl;
+	int endTime = clock();
+	cout << "running time: " << (endTime - startTime) / 1000.0 << "s" << endl;
+	
+	//show messageBOX
+	MessageBox(NULL, TEXT("Message"), TEXT("Finish !"), MB_OK);
+
+	//system("pause");
+	
+}
+
+int main(int argc, char* argv[])
+{
+	
+	main_for_exp();
+	return 0;
+	/**********************************************************/
+	/*test code starts from here*/
+	//string mapPath = "D:\\trajectory\\singapore_data\\singapore_map\\";
+	//string trajPath = "D:\\trajectory\\singapore_data\\experiments\\kechuang\\LinesInput.txt";
+	//string _outputPath = "SZQ.txt";
+	/*test code ends*/
+	/**********************************************************/
+	if (argc != 4)
+	{
+		MessageBox(NULL, TEXT("Error"), TEXT("Parameter Exception !"), MB_OK);
+		exit(0);
+	}
+	string mapPath = argv[1];
+	string trajPath = argv[2];
+	string _outputPath = argv[3];
+	
+	main_for_SZQ(trajPath, mapPath, _outputPath);
 }

@@ -1,9 +1,9 @@
 /* 
- * Last Updated at [2014/9/24 11:07] by wuhao
+ * Last Updated at [2014/10/25 15:03] by wuhao
  */
 #include "ExpGenerator.h"
 
-void ExpGenerator::genExpData()
+void ExpGenerator::genExpData_2MM()
 {
 	//////////////////////////////////////////////////////////////////////////
 	///生成实验数据
@@ -14,14 +14,53 @@ void ExpGenerator::genExpData()
 	for (int i = 0; i < inputFileNames.size(); i++)
 	{
 		cout << ">> 处理文件 " << inputFileNames[i] << endl;
-		genExpData(inputFolder + inputFileNames[i]);
+		genExpData_2MM(inputFolder + inputFileNames[i]);
 	}
 	//输出两次匹配后失败的轨迹
 	extractUnmatchedTrajs();
 }
 
-void ExpGenerator::genExpData(string rawTrajFilePath)
+void ExpGenerator::genExpData_1MM()
 {
+	//////////////////////////////////////////////////////////////////////////
+	///生成实验数据
+	///只找出一次匹配失败的点
+	//////////////////////////////////////////////////////////////////////////
+	//输出所有经过一次匹配后的轨迹
+	for (int i = 0; i < inputFileNames.size(); i++)
+	{
+		cout << ">> 处理文件 " << inputFileNames[i] << endl;
+		genExpData_1MM(inputFolder + inputFileNames[i]);
+	}
+	//输出匹配后失败的轨迹
+	extractUnmatchedTrajs(); //输出既有匹配失败也有匹配成功的轨迹
+}
+
+void ExpGenerator::genExpData_1MM(string rawTrajFilePath)
+{
+	double mmThres = 50.0;
+	readRawTrajs(rawTrajFilePath);
+	doSplit();
+	deleteList(rawTrajs); //释放rawTrajs内存
+	doMM(&originalRoadNetwork, trajsInArea, mmThres);
+
+	for each(Traj* traj in trajsInArea)
+	{
+		for each (GeoPoint* pt in *traj)
+		{
+			pt->mmRoadId2 = 1; //为了利用outputNewTrajs函数而将mmRoadId2设为非-1值来保留下来
+		}
+	}
+	outputNewTrajs(trajsInArea); //输出既有匹配失败也有匹配成功的轨迹
+	deleteList(trajsInArea);
+}
+
+void ExpGenerator::genExpData_2MM(string rawTrajFilePath)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///[注意]第一次匹配：使用mmRoadId2来记录匹配信息
+	///第二从匹配，使用mmRoadId字段来记录匹配信息（勿搞反！）
+	//////////////////////////////////////////////////////////////////////////
 	double mmThres = 25.0;
 	readRawTrajs(rawTrajFilePath);
 	doSplit();
@@ -124,7 +163,7 @@ void ExpGenerator::extractUnmatchedTrajs()
 	{
 		for each (GeoPoint* pt in *traj)
 		{
-			if (pt->mmRoadId == -1) //留下那些第一次匹配就失败的点
+			if (pt->mmRoadId == -1) //留下那些第二次匹配失败的点[是反的，详见genExpData_2MM内注释说明]
 			{
 			//system("pause");
 				ofs << pt->time << " " << pt->lat << " " << pt->lon << " " << -1 << endl;
@@ -304,7 +343,7 @@ void ExpGenerator::outputNewTrajs(list<Traj*>& trajs)
 	{
 		for each (GeoPoint* pt in *traj)
 		{
-			if (pt->mmRoadId2 != -1) //排除掉那些第一次匹配就失败的点
+			if (pt->mmRoadId2 != -1) //排除掉那些第一次匹配就失败的点[是反的，详见genExpData_2MM内注释说明]
 			{
 				newMMTrajsFile << pt->time << " " << pt->lat << " " << pt->lon << " " << pt->mmRoadId << endl;
 				lastOutputIsNegative1 = false;

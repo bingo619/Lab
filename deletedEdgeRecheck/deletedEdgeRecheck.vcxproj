@@ -92,6 +92,7 @@
     <ClInclude Include="Map.h" />
     <ClInclude Include="MapDrawer.h" />
     <ClInclude Include="PointGridIndex.h" />
+    <ClInclude Include="StringOperator.h" />
     <ClInclude Include="TrajReader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

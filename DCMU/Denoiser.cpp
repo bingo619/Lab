@@ -68,11 +68,53 @@ void Denoiser::drawPts(MapDrawer& md)
 					//continue;
 					md.drawPoint(Gdiplus::Color::Red, pt->lat, pt->lon);
 				else
-					md.drawPoint(Gdiplus::Color::Blue, pt->lat, pt->lon);
+					md.drawPoint(Gdiplus::Color::Green, pt->lat, pt->lon);
 			}
 		}
 	}
 }
+
+void Denoiser::outputJSON()
+{
+	string path = "json_denoise.js";
+	ofstream ofs(path);
+	if (!ofs)
+	{
+		cout << "open " << path << " error!" << endl;
+		system("pause");
+	}
+	ofs << fixed << showpoint << setprecision(8);
+	ofs << "data = [" << endl;
+	vector<GeoPoint*> outputPts;
+	for (int row = 0; row < ptIndex->gridHeight; row++)
+	{
+		for (int col = 0; col < ptIndex->gridWidth; col++)
+		{
+			for each (GeoPoint* pt in *(ptIndex->grid[row][col]))
+			{
+				outputPts.push_back(pt);
+			}
+		}
+	}
+	for (int i = 0; i < outputPts.size() - 2; i++)
+	{
+		//{"x":1.29539,"y":103.78579,"edge":37618},
+		GeoPoint* pt = outputPts[i];
+		ofs << "{\"x\":" << pt->lat << ",\"y\":" << pt->lon << ",\"edge\":";
+		if (pt->isOutlier == true)
+			ofs << -1 << "}," << endl;
+		else
+			ofs << 1 << "}," << endl;
+	}
+	//last line
+	ofs << "{\"x\":" << outputPts.back()->lat << ",\"y\":" << outputPts.back()->lon << ",\"edge\":";
+	if (outputPts.back()->isOutlier == true)
+		ofs << -1 << "}]" << endl;
+	else
+		ofs << 1 << "}]" << endl;
+	ofs.close();
+}
+
 //////////////////////////////////////////////////////////////////////////
 ///private part
 //////////////////////////////////////////////////////////////////////////
@@ -229,6 +271,82 @@ void Denoiser::updatePtIndex(PointGridIndex* ptIndex)
 }
 
 //////////////////////////////////////////////////////////////////////////
+double computePhi(PointGridIndex* ptIndex)
+{
+	double gridSizeM = 3.0;
+	PointGridIndex tempIndex;
+	list<GeoPoint*> pts;
+	//get area
+	double minLat = 999;
+	double maxLat = -1;
+	double minLon = 999;
+	double maxLon = -1;
+	for (int row = 0; row < ptIndex->gridHeight; row++)
+	{
+		for (int col = 0; col < ptIndex->gridWidth; col++)
+		{
+			for each (GeoPoint* pt in *ptIndex->grid[row][col])
+			{
+				pts.push_back(pt);
+				if (pt->lat < minLat) minLat = pt->lat;
+				if (pt->lat > maxLat) maxLat = pt->lat;
+				if (pt->lon < minLon) minLon = pt->lon;
+				if (pt->lon > maxLon) maxLon = pt->lon;
+			}
+		}
+	}
+	double delta = 0.0001;
+	Area tempArea(minLat - delta, maxLat + delta, minLon - delta, maxLon + delta);
+	
+	/**********************************************************/
+	/*test code starts from here*/
+	printf("square = %lf\n", (maxLon - minLon) * (maxLat - minLat) * GeoPoint::geoScale * GeoPoint::geoScale);
+	/*test code ends*/
+	/**********************************************************/
+	
+	double widthM = (maxLon - minLon) * GeoPoint::geoScale;
+	int gridWidth = widthM / gridSizeM;
+	tempIndex.createIndex(pts, &tempArea, gridWidth);
+
+	//cal square
+	double square = 0;
+	for (int row = 0; row < tempIndex.gridHeight; row++)
+	{
+		for (int col = 0; col < tempIndex.gridWidth; col++)
+		{
+			if (tempIndex.grid[row][col]->size() > 0)
+			{
+				square++;
+			}
+		}
+	}
+	square = square * gridSizeM * gridSizeM;
+	
+	/**********************************************************/
+	/*test code starts from here*/
+	printf("square = %lf\n", square);
+	/*test code ends*/
+	/**********************************************************/
+	
+	
+
+	//cal phi
+	double roadWidthM = 10.7918;
+	//tempIndex.drawGridLine(Gdiplus::Color::Green, md);
+	return pts.size() / (square / (2 * roadWidthM));
+}
+
+double computeR(PointGridIndex* ptIndex, int k)
+{
+	double phi = computePhi(ptIndex);
+	printf("phi = %lf\n", phi);
+	double sigma = 15.4307;
+	double l = 15;
+	double p_l = exp(-l*l / (2 * sigma*sigma)) / (sqrt(2 * PI) * sigma);
+	return sqrt(k / (phi * p_l)) / 2;
+}
+
+//////////////////////////////////////////////////////////////////////////
 int Denoiser::calDensity(GeoPoint* pt)
 {
 	vector<GeoPoint*> nearPts;
@@ -283,15 +401,15 @@ pair<int, double> Denoiser::findMaxDensity(GeoPoint* pt)
 	return make_pair(maxDensity, maxL);
 }
 
-void Denoiser::outlierValidationEx(GeoPoint* pt)
+void Denoiser::outlierValidationEx(GeoPoint* pt, double kNNThresholdM)
 {
-	if (pt->lmd < 3.0)
+	if (pt->lmd < kNNThresholdM)
 	{
 		pt->isOutlier = 0;
 		return;
 	}
-	//pt->isOutlier = 1;
-	//return;
+	pt->isOutlier = 1;
+	return;
 	int density = calDensity(pt);
 	pair<int, double> tempPair = findMaxDensity(pt);
 	double maxL = tempPair.second;
@@ -305,7 +423,7 @@ void Denoiser::outlierValidationEx(GeoPoint* pt)
 		pt->isOutlier = 1;
 	}
 	return;*/
-	if (density < 5)
+	if (density < 3)
 	{
 		pt->isOutlier = 1;
 	}
@@ -334,7 +452,11 @@ void Denoiser::runEx(PointGridIndex* _ptIndex)
 	this->ptIndex = _ptIndex;
 	int count = 0;
 	int k = 10;
-	double kNNThresholdM = 3;
+	double kNNThresholdM = computeR(this->ptIndex, k);
+	kNNThresholdM *= relaxRatio;//or l = 10, ratio = 1.9
+	cout << "kNNThresholdM = " << kNNThresholdM << endl;
+	//return;
+//	double kNNThresholdM = 2.3;
 
 	for (int row = 0; row < ptIndex->gridHeight; row++)
 	{
@@ -357,9 +479,10 @@ void Denoiser::runEx(PointGridIndex* _ptIndex)
 				{
 					cout << "ÒÑ´¦Àí" << count << endl;
 				}
-				outlierValidationEx(pt);
+				outlierValidationEx(pt, kNNThresholdM);
 				count++;
 			}
 		}
 	}
 }
+

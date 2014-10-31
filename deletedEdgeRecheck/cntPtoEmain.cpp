@@ -7,18 +7,20 @@
 #include "PointGridIndex.h"
 #include "getDelEdgeFile.h"
 #include "TrajReader.h"
+#include "StringOperator.h"
 using namespace std;
 using namespace Gdiplus;
 
 Map roadNetwork;
-Area area(1.294788, 1.393593, 103.784667, 103.906266); //big
+//Area area(1.294788, 1.393593, 103.784667, 103.906266); //big
 //Area area(1.343593, 1.442398, 103.784667, 103.906266); //big2
-//Area area(1.294788, 1.393593, 103.704667, 103.826266); //big3
+Area area(1.294788, 1.393593, 103.704667, 103.826266); //big3
+int sampleRate = 30;
 
 MapDrawer md;
 vector<Figure*> figures;
 
-string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area1\\";
+string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area3\\";
 string inputDeletedEdgesPath = workspaceFolder + "deletedEdges.txt";
 
 void initialization()
@@ -47,9 +49,16 @@ void dealwithDeleteEdge(int gridwith, double thresholdM, int thresholdI)
 	PointGridIndex pGridIndex;
 	
 	//打开需要判断的点文件
-	TrajReader tr(workspaceFolder + "120_newMMTrajs_unmatched.txt");
+	TrajReader tr(workspaceFolder + StringOperator::intToString(sampleRate) + "_newMMTrajs_unmatched.txt");
 	list<Traj*> trajs;
 	tr.readTrajs(trajs);
+
+	int days = 1;
+	int trajCount = double(trajs.size() * days) / 15.0;
+	trajs.clear();
+	tr.open(workspaceFolder + StringOperator::intToString(sampleRate) + "_newMMTrajs_unmatched.txt");
+	tr.readTrajs(trajs, trajCount);
+
 	list<GeoPoint*> allPts;
 	for each(Traj* traj in trajs)
 	{
@@ -125,7 +134,7 @@ void dealwithDeleteEdge(int gridwith, double thresholdM, int thresholdI)
 				if (roadNetwork.distM((*iter)->lat, (*iter)->lon, edge) <= thresholdM) RNcount++;
 				if (RNcount > thresholdI) break;
 			}
-			if (RNcount <= thresholdI || roadNetwork.edges[edgeId]->lengthM > 4000){// * roadNetwork.edges[edgeId]->lengthM) {
+			if (RNcount <= thresholdI || roadNetwork.edges[edgeId]->lengthM > 2000){// * roadNetwork.edges[edgeId]->lengthM) {
 				otherDelEdge.push_back(edgeId);
 			}
 			else {
@@ -135,7 +144,7 @@ void dealwithDeleteEdge(int gridwith, double thresholdM, int thresholdI)
 	}
 
 	//输出
-	ofstream ofs("newDeletedEdges.txt");
+	ofstream ofs("newDeletedEdges_" + StringOperator::intToString(sampleRate) + "_" + StringOperator::intToString(days) + "d.txt");
 	for (vector<int>::iterator iter = LargeDelEdge.begin(); iter != LargeDelEdge.end(); iter++)
 	{
 		ofs << *iter << endl;
@@ -182,7 +191,7 @@ void test()
 {
 	initialization();
 	//参数
-	int thresholdI = 200; //密度阈值为1点/m
+	int thresholdI = 250; //小于这个数值的都要删掉
 	double thresholdM = 30;
 	int gridwith = 500; 
 

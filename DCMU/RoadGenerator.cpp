@@ -273,9 +273,9 @@ void RoadGenerator::drawPolyline(Cluster* cluster, MapDrawer& md, Gdiplus::Color
 	}
 	for (int i = 0; i < cluster->polyline.size(); i++)
 	{
-		md.drawBigPoint(Gdiplus::Color::Red, cluster->polyline[i]->lat, cluster->polyline[i]->lon);
+		//md.drawBigPoint(Gdiplus::Color::Red, cluster->polyline[i]->lat, cluster->polyline[i]->lon);
 	}
-	md.drawBigPoint(Gdiplus::Color::Green, cluster->polyline[0]->lat, cluster->polyline[0]->lon);
+	//md.drawBigPoint(Gdiplus::Color::Green, cluster->polyline[0]->lat, cluster->polyline[0]->lon);
 }
 
 void RoadGenerator::genAllPolyLines()
@@ -291,12 +291,12 @@ void RoadGenerator::genAllPolyLines()
 			continue;
 		if (isBadClusterEx(clusters[i], clusters, md))
 		{
-			drawPolyline(clusters[i], md, Gdiplus::Color::Aqua);
+			//drawPolyline(clusters[i], md, Gdiplus::Color::Aqua);
 			clusters[i]->polyline.clear();
 		}
 		else
 		{
-			drawPolyline(clusters[i], md, Gdiplus::Color::Gray);
+			//drawPolyline(clusters[i], md, Gdiplus::Color::Gray);
 		}
 	}
 

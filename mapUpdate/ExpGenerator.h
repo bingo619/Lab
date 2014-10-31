@@ -23,7 +23,7 @@ public:
 	Area* area;
 	string inputFolder = "D:\\trajectory\\singapore_data\\201202\\every day\\";
 	vector<string> inputFileNames;
-	string outputFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\";
+	string outputFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area1_sparse\\";
 	string newMMTrajsFileName = "newMMTrajs.txt";
 	string newMMTrajsFileName_unmatched = "newMMTrajs_unmatched.txt";
 	ofstream newMMTrajsFile;

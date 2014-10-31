@@ -11,24 +11,53 @@ void DCMU::run()
 {
 	//网格聚类
 	gridClustering();
-	//降噪
- 	for (int i = 0; i < ptIndexes.size(); i++)
- 	{
- 		//denoiser.run(ptIndexes[i]);
- 
-// 		/**********************************************************/
-// 		/*test code starts from here*/
-// 		denoiser.drawPts(md);
-// 		/*test code ends*/
-// 		/**********************************************************/
-// 
- 	}
+	cout << ptIndexes.size() << endl;
 	
+	/*//code for TCC
+	extractForTC1();
+	return;*/
+
+	/**********************************************************/
+	/*test code starts from here*/
+	/*for (int i = 10; i >= 2; i--)
+	{
+	ptIndexes.pop_back();
+	}*/
+	/*test code ends*/
+	/**********************************************************/
+	//降噪
+ 	//for (int i = 0; i < ptIndexes.size(); i++)
+ 	//{
+		///*MapDrawer md;
+		//md.setArea(&area);
+		//md.setResolution(1000);
+		//md.newBitmap();
+		//md.lockBits();
+		//denoiser.runEx(ptIndexes[i]);
+		//denoiser.drawPts(md);
+		//md.unlockBits();
+		//char id[10];
+		//_itoa(i, id, 10);
+		//string id_str = id;
+		//md.saveBitmap("partition_" + id_str + ".png");*/
+		//denoiser.runEx(ptIndexes[i]);
+		////denoiser.drawPts(md);
+ 	//}
+	//return;
 	//方向聚类
 	for (int i = 0; i < ptIndexes.size(); i++)
 	{
 		ptCluster.run(ptIndexes[i]);
-		ptCluster.drawClusters(md);
+		//ptCluster.drawClusters(md);
+		//cout << "!!!!!!!!!!!" << ptCluster.pts.size();
+		/*for each (GeoPoint* pt in ptCluster.pts)
+		{
+		GeoPoint* ptEnd = new GeoPoint;
+		double length = 3 / GeoPoint::geoScale;
+		ptEnd->lat = pt->lat + length * sin(pt->direction);
+		ptEnd->lon = pt->lon + length * cos(pt->direction);
+		md.drawLine(Gdiplus::Color::Blue, pt->lat, pt->lon, ptEnd->lat, ptEnd->lon);
+		}*/
 	}
 
 	//生成路段
@@ -36,12 +65,48 @@ void DCMU::run()
 	rg.run(&allPtIndex, ptCluster.clusters);
 }
 
+void DCMU::extractForTC1()
+{
+	//////////////////////////////////////////////////////////////////////////
+	///目标区域：港口区
+	///目的：将partition到partition[0]的所有点的clusterId标记成1
+	///然后将所有连续的两个点的clusterId都为1的segment选出来
+	//////////////////////////////////////////////////////////////////////////
+	ofstream ofs("port.txt");
+	ofs << fixed << showpoint << setprecision(8);
+	int partId = 1;
+	for (int row = 0; row < ptIndexes[partId]->gridHeight; row++)
+	{
+		for (int col = 0; col < ptIndexes[partId]->gridWidth; col++)
+		{
+			for each (GeoPoint* pt in *ptIndexes[partId]->grid[row][col])
+			{
+				pt->clusterId = 1;
+			}
+		}
+	}
+	for each(Traj* traj in trajs)
+	{
+		Traj::iterator currentIter = traj->begin();
+		Traj::iterator nextIter = traj->begin(); nextIter++;
+		for (; nextIter != traj->end(); currentIter++, nextIter++)
+		{
+			if ((*currentIter)->clusterId == 1 && (*nextIter)->clusterId == 1)
+			{
+				ofs << (*currentIter)->time << " " << (*currentIter)->lat << " " << (*currentIter)->lon <<
+					" " << (*nextIter)->time << " " << (*nextIter)->lat << " " << (*nextIter)->lon << endl;
+				md.drawLine(Gdiplus::Color::Red, (*currentIter)->lat, (*currentIter)->lon, (*nextIter)->lat, (*nextIter)->lon);
+			}
+		}
+	}
+	ofs.close();
+}
 
 void DCMU::run1()
 {
 	allPtIndex.drawGridLine(Gdiplus::Color::Green, md);
 	//网格聚类
-	int index = 38;
+	int index = 0;
 	gridClustering();
 	denoiser.run(ptIndexes[index]);
 	
@@ -94,8 +159,183 @@ void DCMU::run1()
 
 void DCMU::run2()
 {
+	//////////////////////////////////////////////////////////////////////////
+	///专为降噪设计
+	//////////////////////////////////////////////////////////////////////////
 	denoiser.runEx(&allPtIndex);
 	denoiser.drawPts(md);
+	denoiser.outputJSON();
+}
+
+double cosAngle(GeoPoint* pt1, GeoPoint* pt2, GeoPoint* pt3)
+{
+	double v1x = pt2->lon - pt1->lon;
+	double v1y = pt2->lat - pt1->lat;
+	double v2x = pt3->lon - pt2->lon;
+	double v2y = pt3->lat - pt2->lat;
+	return (v1x * v2x + v1y * v2y) / sqrt((v1x * v1x + v1y * v1y)*(v2x * v2x + v2y * v2y));
+}
+
+double getRoadDir(GeoPoint* pt, Edge* edge)
+{
+	double minDist = INF;
+	double roadDir;
+	//遍历端点距离
+	for (Figure::iterator iter = edge->figure->begin(); iter != edge->figure->end(); iter++)
+	{
+		double tmpDist = GeoPoint::distM(pt->lat, pt->lon, (*iter)->lat, (*iter)->lon);
+		if (tmpDist < minDist)
+		{
+			minDist = tmpDist;
+			if (*iter != edge->figure->back())
+			{
+				Figure::iterator tempIter = iter;
+				tempIter++;
+				double vec_x = (*tempIter)->lon - (*iter)->lon;
+				double vec_y = (*tempIter)->lat - (*iter)->lat;
+				if (vec_y < 0)
+				{
+					vec_x = -vec_x;
+					vec_y = -vec_y;
+				}
+				roadDir = acos(vec_x / sqrt(vec_x * vec_x + vec_y * vec_y));
+			}
+			else
+			{
+				Figure::iterator tempIter = iter;
+				tempIter--;
+				double vec_x = (*iter)->lon - (*tempIter)->lon;
+				double vec_y = (*iter)->lat - (*tempIter)->lat;
+				if (vec_y < 0)
+				{
+					vec_x = -vec_x;
+					vec_y = -vec_y;
+				}
+				roadDir = acos(vec_x / sqrt(vec_x * vec_x + vec_y * vec_y));
+			}
+		}
+	}
+	//遍历投影距离
+	Figure::iterator iter = edge->figure->begin();
+	Figure::iterator nextIter = edge->figure->begin();
+	nextIter++;
+	while (nextIter != edge->figure->end())
+	{
+		//有投影
+		if (cosAngle(pt, (*iter), (*nextIter)) <= 0 && cosAngle(pt, (*nextIter), (*iter)) <= 0)
+		{
+			double A = ((*nextIter)->lat - (*iter)->lat);
+			double B = -((*nextIter)->lon - (*iter)->lon);
+			double C = (*iter)->lat * ((*nextIter)->lon - (*iter)->lon)
+				- (*iter)->lon * ((*nextIter)->lat - (*iter)->lat);
+			double tmpDist = abs(A * pt->lon + B * pt->lat + C) / sqrt(A * A + B * B);
+			tmpDist *= GeoPoint::geoScale;
+			if (minDist > tmpDist)
+			{
+				minDist = tmpDist;
+				double vec_x = (*nextIter)->lon - (*iter)->lon;
+				double vec_y = (*nextIter)->lat - (*iter)->lat;
+				if (vec_y < 0)
+				{
+					vec_x = -vec_x;
+					vec_y = -vec_y;
+				}
+				roadDir = acos(vec_x / sqrt(vec_x * vec_x + vec_y * vec_y));
+			}
+		}
+		iter++;
+		nextIter++;
+	}
+	return roadDir;
+}
+
+void DCMU::run3(int roadId, double rectW, double rectL)
+{
+	ptCluster.d = rectW;
+	ptCluster.l = rectL;
+	ptCluster.run(&allPtIndex);
+	//drawPts
+	for each (GeoPoint* pt in ptCluster.pts)
+	{
+		md.drawPoint(Gdiplus::Color::Green, pt->lat, pt->lon);
+	}
+
+	//drawRoadId
+	for (int i = 0; i < roadNetwork.edges.size(); i++)
+	{
+		if (roadNetwork.edges[i] == NULL)
+		{
+			continue;
+		}
+		int  deltaX = (double)rand() / RAND_MAX *70;
+		int  deltaY = (double)rand() / RAND_MAX * 50;
+		int x = md.geoToScreen(roadNetwork.edges[i]->figure->front()->lat, roadNetwork.edges[i]->figure->front()->lon).X + deltaX;
+		int y = md.geoToScreen(roadNetwork.edges[i]->figure->front()->lat, roadNetwork.edges[i]->figure->front()->lon).Y + deltaY;
+		md.drawInt(Gdiplus::Color::Red, x, y, i);
+	}
+	//return;
+	
+	/*double roadDir;
+	double vec_x = roadNetwork.edges[roadId]->figure->back()->lon - roadNetwork.edges[roadId]->figure->front()->lon;
+	double vec_y = roadNetwork.edges[roadId]->figure->back()->lat - roadNetwork.edges[roadId]->figure->front()->lat;
+	if (vec_y < 0)
+	{
+		vec_x = -vec_x;
+		vec_y = -vec_y;
+	}*/
+	
+	//vec_x *= 1000;
+	//vec_y *= 1000;
+	//printf("vec_X = %lf, vec_y = %lf\n", vec_x, vec_y);
+	//printf("acos = %.8lf\n", vec_x / sqrt(vec_x * vec_x + vec_y * vec_y));
+	//roadDir = acos(vec_x / sqrt(vec_x * vec_x + vec_y * vec_y));
+	//cout << "roadDir = " << roadDir << endl;
+	//system("pause");
+	//ptCluster.calPtsDirs();
+	double error = 0;
+	//cal road Dir
+
+	int count = 0;
+	for (int row = 0; row < ptCluster.ptIndex->gridHeight; row++)
+	{
+		for (int col = 0; col < ptCluster.ptIndex->gridWidth; col++)
+		{
+			for each (GeoPoint* pt in *(ptCluster.ptIndex->grid[row][col]))
+			{
+				if (pt->mmRoadId != roadId)
+					continue;
+				count++;
+
+				double roadDir = getRoadDir(pt, roadNetwork.edges[roadId]);
+
+				GeoPoint* ptEnd = new GeoPoint;
+				double length = 3 / GeoPoint::geoScale;
+				ptEnd->lat = pt->lat + length * sin(pt->direction);
+				ptEnd->lon = pt->lon + length * cos(pt->direction);
+				md.drawLine(Gdiplus::Color::Blue, pt->lat, pt->lon, ptEnd->lat, ptEnd->lon);
+
+				
+
+				double deltaAngle = 0;
+				if (abs(roadDir - pt->direction) < PI / 2)
+					deltaAngle = abs(roadDir - pt->direction);
+				else
+					deltaAngle = PI - abs(roadDir - pt->direction);
+				if (deltaAngle > ptCluster.angleThres)
+				{
+					error += (deltaAngle - ptCluster.angleThres);// *(deltaAngle - ptCluster.angleThres);
+// 					GeoPoint* ptEnd = new GeoPoint;
+// 					double length = 3 / GeoPoint::geoScale;
+// 					ptEnd->lat = pt->lat + length * sin(pt->direction);
+// 					ptEnd->lon = pt->lon + length * cos(pt->direction);
+// 					md.drawLine(Gdiplus::Color::Red, pt->lat, pt->lon, ptEnd->lat, ptEnd->lon);
+				}
+			}
+		}		
+	}
+	error /= count;
+	//error /= 2;
+	printf("w = %lf, l = %lf, error = %.8lf\n", rectW, rectL, error);
 }
 
 

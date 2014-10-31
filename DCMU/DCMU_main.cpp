@@ -24,17 +24,27 @@
 using namespace std;
 using namespace Gdiplus;
 
-Area area(1.294788, 1.327723, 103.784667, 103.825200); //small
+//Area area(1.26883, 1.27497, 103.79333, 103.80016); //port_不用这个了
+//Area area(1.26883, 1.27636, 103.79013, 103.80016); //port
+//Area area(1.294788, 1.327723, 103.784667, 103.825200); //small
 //Area area(1.294788, 1.393593, 103.784667, 103.906266); //area1
 //Area area(1.343593, 1.442398, 103.784667, 103.906266); //area2
-//Area area(1.294788, 1.393593, 103.704667, 103.826266); //area3
+Area area(1.294788, 1.393593, 103.704667, 103.826266); //area3
 
 Map roadNetwork;
 Map originalRoadNetwork; //未用
 MapDrawer md;
+list<Traj*> trajs;
 PointGridIndex allPtIndex;
+//double gridSizeM = 10.0;
+//int gridWidth = (area.maxLon - area.minLon) * GeoPoint::geoScale / gridSizeM;
 int gridWidth = 900;
-string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area1\\";
+string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area3\\";
+//string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\port area\\";
+
+list<GeoPoint*> allPts;
+list<Traj*> allTrajs;
+int roadId = 10126;//38139;//10339;//37765;
 
 void initialization()
 {
@@ -42,9 +52,14 @@ void initialization()
 	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\", 150);
 	roadNetwork.deleteEdges(workspaceFolder + "deletedEdges.txt");
 	
-	TrajReader tr(workspaceFolder + "120_newMMTrajs_unmatched.txt");
-	list<Traj*> trajs;
+	TrajReader tr(workspaceFolder + "30_newMMTrajs_unmatched.txt");
+	
 	tr.readTrajs(trajs);//, 50000);
+	int days = 1;
+	int trajCount = double(trajs.size() * days) / 15.0;
+	trajs.clear();
+	tr.open(workspaceFolder + "30_newMMTrajs_unmatched.txt");
+	tr.readTrajs(trajs, trajCount);
 	
 	list<GeoPoint*> allPts;
 	for each(Traj* traj in trajs)
@@ -64,9 +79,9 @@ void initializationForDenoiser()
 {
 	roadNetwork.setArea(&area);
 	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\", 50);
-	roadNetwork.deleteEdges(workspaceFolder + "deletedEdges.txt");
+	//roadNetwork.deleteEdges(workspaceFolder + "deletedEdges.txt");
 	workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\unmatched pts\\";
-	string ptsFilePath = workspaceFolder +  "cluster 10.txt";;
+	string ptsFilePath = workspaceFolder +  "cluster 11.txt";;
 	ifstream ifs(ptsFilePath);
 	list<GeoPoint*> allPts;
 	if (!ifs)
@@ -92,7 +107,51 @@ void initializationForDenoiser()
 	allPtIndex.createIndex(allPts, &area, 300);
 
 	md.setArea(&area);
-	md.setResolution(5000);
+	md.setResolution(3000);
+}
+
+void initializationForDirCompTest()
+{
+	
+	roadNetwork.setArea(&area);
+	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\", 50);
+//	roadNetwork.deleteEdges(workspaceFolder + "deletedEdges.txt");
+	//workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\unmatched pts\\";
+	string trajFilePath = "D:\\trajectory\\singapore_data\\201202\\every day\\wy_MMTrajs1.txt";
+	//string ptsFilePath = workspaceFolder + "cluster 11.txt";
+	ifstream ifs(trajFilePath);
+	
+	
+	TrajReader tReader(trajFilePath);
+	tReader.readTrajs(allTrajs);//, 50000);
+	for each(Traj* traj in allTrajs)
+	{
+		for each (GeoPoint* pt in *traj)
+		{
+			//cout << pt->mmRoadId << endl;
+			//system("pause");
+		//	if (pt->mmRoadId != roadId)
+			//	continue;
+			//else
+			{
+				allPts.push_back(pt);
+			}
+		}
+	}
+	cout << "共读入" << allPts.size() << "个点" << endl;
+
+	allPtIndex.createIndex(allPts, &area, 300);
+	//int count = 0;
+	//for (int row = 0; row < allPtIndex.gridHeight; row++)
+	//{
+	//	for (int col = 0; col < allPtIndex.gridWidth; col++)
+	//	{
+	//		count += allPtIndex.grid[row][col]->size();
+	//	}
+	//}
+	//cout << "count " << count << endl;
+	md.setArea(&area);
+	md.setResolution(15000);
 }
 
 void genMMData()
@@ -149,6 +208,61 @@ void genMMData()
 	exit(0);
 }
 
+void genExpData_1MM()
+{
+	//////////////////////////////////////////////////////////////////////////
+	///生成港口位置的一次MM数据
+	//////////////////////////////////////////////////////////////////////////
+	roadNetwork.setArea(&area);
+	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\", 50);
+	originalRoadNetwork.setArea(&area);
+	originalRoadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\", 50);
+
+	ExpGenerator eg;
+
+	eg.outputFolder = "D:\\trajectory\\singapore_data\\experiments\\port area\\";
+
+	eg.inputFileNames.push_back("logs_20120207_20120208.txt");
+	eg.inputFileNames.push_back("logs_20120208_20120209.txt");
+	eg.inputFileNames.push_back("logs_20120209_20120210.txt");
+	eg.inputFileNames.push_back("logs_20120210_20120211.txt");
+	eg.inputFileNames.push_back("logs_20120211_20120212.txt");
+	eg.inputFileNames.push_back("logs_20120212_20120213.txt");
+	eg.inputFileNames.push_back("logs_20120215_20120216.txt");
+	eg.inputFileNames.push_back("logs_20120216_20120217.txt");
+	eg.inputFileNames.push_back("logs_20120217_20120218.txt");
+	eg.inputFileNames.push_back("logs_20120218_20120219.txt");
+
+
+	eg.setArea(&area);
+
+	//eg.genExpData_1MM();
+	//system("pause");
+	//exit(0);
+	/**********************************************************/
+	/*test code starts from here*/
+	TrajReader tr("D:\\trajectory\\singapore_data\\experiments\\port area\\newMMTrajs.txt");
+	list<Traj*> trajs;
+	tr.readTrajs(trajs);// , 50000);
+	/*test code ends*/
+	/**********************************************************/
+
+
+	//draw
+	md.setArea(&area);
+	md.setResolution(15000);
+	md.newBitmap();
+	md.lockBits();
+
+	roadNetwork.drawMap(Color::Black, md);
+	roadNetwork.drawDeletedEdges(Gdiplus::Color::Red, md);
+	TrajDrawer::drawMMTrajs(trajs, md, Color::Red, false, true, false, true);
+	md.unlockBits();
+	md.saveBitmap("expTest.png");
+	system("pause");
+	exit(0);
+}
+
 void subSample()
 {
 	ExpGenerator eg;
@@ -200,19 +314,37 @@ void dataAnalyzer(string dataPath)
 
 void main()
 {
+	//genExpData_1MM();
 	//genMMData();
 	//subSample();
+	//exit(0);
+	
 	//dataAnalyzer("120_newMMTrajs_unmatched.txt");
 	//system("pause");
 	//exit(0);
-	//initialization();
-	initializationForDenoiser();
+	
+	initialization();
+	//initializationForDenoiser();
+	//initializationForDirCompTest();
 	DCMU dcmu;
 
 	md.newBitmap();
 	md.lockBits();
-	dcmu.run2();
-	allPtIndex.drawGridLine(Color::Green, md);
+	dcmu.run();
+	//allPtIndex.drawGridLine(Color::Green, md);
+	//TrajDrawer::drawMMTrajs(allTrajs, md, Gdiplus::Color::Green);
+	//roadNetwork.drawMap(Gdiplus::Color::Black, md);
+	//for each (GeoPoint* pt in allPts)
+	//{
+	//	md.drawBigPoint(Gdiplus::Color::Green, pt->lat, pt->lon);
+	//}
+	//
+	//for (int l = 5; l < 105; l+=5)
+	//{
+	//	dcmu.run3(roadId, 10.0, (double)l);
+	//}
+	//
+	//allPtIndex.drawGridLine(Color::Green, md);
 	md.unlockBits();
-	md.saveBitmap("cluster11.png");
+	md.saveBitmap("DCMU.png");
 }

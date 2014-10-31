@@ -1,6 +1,7 @@
 /* 
  * Last Updated at [2014/9/24 11:08] by wuhao
  */
+#define _CRT_SECURE_NO_WARNINGS
 #pragma once
 #include <iostream>
 #include "GeoPoint.h"
@@ -10,6 +11,8 @@
 #include "PtCluster.h"
 #include "RoadGenerator.h"
 #include "PointMover.h"
+#include "TrajReader.h"
+
 using namespace std;
 
 extern Map roadNetwork;
@@ -17,6 +20,7 @@ extern PointGridIndex allPtIndex;
 extern Area area;
 extern MapDrawer md;
 extern int gridWidth;
+extern list<Traj*> trajs;
 
 class DCMU
 {
@@ -24,7 +28,9 @@ public:
 	vector<PointGridIndex*> ptIndexes;
 	void run();
 	void run1();
-	void run2();
+	void run2(); //denoiseTest
+	void run3(int roadId, double rectW, double rectL); //dirCompTest
+	void extractForTC1();
 
 private:
 	//gird partition

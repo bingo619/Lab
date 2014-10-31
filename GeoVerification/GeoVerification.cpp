@@ -69,7 +69,7 @@ void GeoVerification::verificate(vector<Figure*>& genFigures, MapDrawer& md)
 	
 	/**********************************************************/
 	/*test code starts from here*/
-	printf("delEdge size = %d, delEdge_oneway.size = %d\n", roadNetwork.deletedEdges.size(), delEdges_oneway.size());
+	//printf("delEdge size = %d, delEdge_oneway.size = %d\n", roadNetwork.deletedEdges.size(), delEdges_oneway.size());
 	/*test code ends*/
 	/**********************************************************/
 	
@@ -103,14 +103,114 @@ void GeoVerification::verificate(vector<Figure*>& genFigures, MapDrawer& md)
 	{
 		correctLengthM2 += matchedGenFiguresLength[i].first;
 	}
-	cout << "totalDelLength = " << totalDelLengthM << endl;
+	/*cout << "totalDelLength = " << totalDelLengthM << endl;
 	cout << "totalGenLength = " << totalGenLengthM << endl;
 	cout << "correctLength = " << correctLengthM << endl;
-	cout << "correctLength2 = " << correctLengthM2 << endl;
+	cout << "correctLength2 = " << correctLengthM2 << endl;*/
 	cout << "recall = " << correctLengthM / totalDelLengthM << endl;
 	cout << "precision = " << correctLengthM2 / totalGenLengthM << endl;
 }
 
+void GeoVerification::verificate_MI(vector<Figure*>& genFigures, MapDrawer& md)
+{
+	//计算totalDelLength
+	for (int i = 0; i < roadNetwork.deletedEdges.size(); i++)
+	{
+		totalDelLengthM += roadNetwork.deletedEdges[i]->lengthM;
+	}
+
+	//计算totalGenLength
+	for (int i = 0; i < genFigures.size(); i++)
+	{
+		Figure::iterator ptIter = genFigures[i]->begin(), nextPtIter = ptIter;
+		nextPtIter++;
+		double figureLength = 0;
+		while (1)
+		{
+			if (nextPtIter == genFigures[i]->end())
+				break;
+			totalGenLengthM += GeoPoint::distM((*ptIter)->lat, (*ptIter)->lon, (*nextPtIter)->lat, (*nextPtIter)->lon);
+			figureLength += GeoPoint::distM((*ptIter)->lat, (*ptIter)->lon, (*nextPtIter)->lat, (*nextPtIter)->lon);
+			ptIter++;
+			nextPtIter++;
+		}
+		matchedGenFiguresLength.push_back(make_pair(0, figureLength));
+	}
+
+
+	//删除掉双向路的一边
+	//[注意]deletedEdges必须保证双向路在数组中的存放顺序一定是连续的
+	int index = 0;
+	while (1)
+	{
+		if (index < roadNetwork.deletedEdges.size() - 1)
+		{
+			if ((roadNetwork.deletedEdges[index]->startNodeId == roadNetwork.deletedEdges[index + 1]->endNodeId)
+				&& (roadNetwork.deletedEdges[index]->endNodeId == roadNetwork.deletedEdges[index + 1]->startNodeId)) //当前路是双向的
+			{
+				delEdges_oneway.push_back(roadNetwork.deletedEdges[index]);
+				index += 2;
+			}
+			else //当前路是单向的
+			{
+				delEdges_oneway.push_back(roadNetwork.deletedEdges[index]);
+				index += 1;
+			}
+		}
+		else if (index > roadNetwork.deletedEdges.size() - 1)
+		{
+			break;
+		}
+		else
+		{
+			delEdges_oneway.push_back(roadNetwork.deletedEdges[index]);
+			break;
+		}
+	}
+
+	/**********************************************************/
+	/*test code starts from here*/
+	printf("delEdge size = %d, delEdge_oneway.size = %d\n", roadNetwork.deletedEdges.size(), delEdges_oneway.size());
+	/*test code ends*/
+	/**********************************************************/
+
+	clipEdges(delEdges_oneway); //将删除的路(留下单向的部分)切割开来存入segments向量中
+
+	for (int i = 0; i < segments.size(); i++)
+	{
+		if (verificateOneSegment_MI(segments[i], genFigures))
+		{
+			/**********************************************************/
+			/*test code starts from here*/
+			md.drawLine(Gdiplus::Color::Green, segments[i].first.lat, segments[i].first.lon, segments[i].second.lat, segments[i].second.lon);
+			//md.drawBigPoint(Gdiplus::Color::Black, segments[i].second.lat, segments[i].second.lon);
+			//md.drawBigPoint(Gdiplus::Color::Aqua, segments[i].second.lat, segments[i].second.lon);
+			/*test code ends*/
+			/**********************************************************/
+		}
+		else
+		{
+			md.drawLine(Gdiplus::Color::Red, segments[i].first.lat, segments[i].first.lon, segments[i].second.lat, segments[i].second.lon);
+		}
+	}
+	//map inference 25m补正
+	//correctLengthM += 25 * 20 * 2;
+	//totalGenLengthM += 25 * 20 * 2;
+	//for wang yin
+	//totalDelLengthM /= 2;
+	//cal correctfLength
+	int correctLengthM2 = 0;
+	for (int i = 0; i < matchedGenFiguresLength.size(); i++)
+	{
+		correctLengthM2 += matchedGenFiguresLength[i].first;
+	}
+	/*cout << "totalDelLength = " << totalDelLengthM << endl;
+	cout << "totalGenLength = " << totalGenLengthM << endl;
+	cout << "correctLength = " << correctLengthM << endl;
+	cout << "correctLength2 = " << correctLengthM2 << endl;*/
+	cout << "recall = " << correctLengthM / totalDelLengthM << endl;
+	cout << "precision = " << correctLengthM2 / totalGenLengthM << endl;
+}
 
 void GeoVerification::clipEdges(vector<Edge*>& delEdges)
 {
@@ -183,5 +283,46 @@ bool GeoVerification::verificateOneSegment(Segment segment, vector<Figure*>& gen
 	{
 		return true;
 	}	
+	return false;
+}
+
+bool GeoVerification::verificateOneSegment_MI(Segment segment, vector<Figure*>& genFigures)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///检测一段segment是否能够匹配到某条路上
+	///存在两条edge[注意]是两条，因为我现在把每个segment代表的是双向路上的，使得segment的两个端点到edge的距离都小于thresholdM，则认为segment是匹配成功的
+	///同时更新correctLengthM
+	//////////////////////////////////////////////////////////////////////////
+
+	GeoPoint fromPt = segment.first;
+	GeoPoint toPt = segment.second;
+	int correctEdgeCount = 0;
+	for (int i = 0; i < genFigures.size(); i++)
+	{
+		Edge tempEdge;
+		tempEdge.figure = genFigures[i];
+		if (roadNetwork.distM(fromPt.lat, fromPt.lon, &tempEdge) < thresholdM &&
+			roadNetwork.distM(toPt.lat, toPt.lon, &tempEdge) < thresholdM)
+		{
+			correctEdgeCount++;
+			correctLengthM += GeoPoint::distM(fromPt, toPt);
+			if (matchedGenFiguresLength[i].first + GeoPoint::distM(fromPt, toPt) <= matchedGenFiguresLength[i].second)
+			{
+				matchedGenFiguresLength[i].first += GeoPoint::distM(fromPt, toPt);
+			}
+			else
+			{
+				matchedGenFiguresLength[i].first = matchedGenFiguresLength[i].second;
+			}
+		}
+		if (correctEdgeCount == 2)
+		{
+			return true;
+		}
+	}
+	if (correctEdgeCount == 1)
+	{
+		return true;
+	}
 	return false;
 }

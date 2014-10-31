@@ -1005,6 +1005,11 @@ void Map::deleteEdgesRandomly(int delNum, double minEdgeLengthM)
 
 void Map::deleteEdgesRandomlyEx(int delNum, double minEdgeLengthM, double aroundThresholdM, int aroundNumThreshold, bool doOutput /* = true */)
 {
+	//////////////////////////////////////////////////////////////////////////
+	///随机删除delNum条路，路的长度需超过minEdgeLengthM（单位为m）
+	///每次取出的种子点需要保证周围aroundThresholdM米不超过aroundNumThreshold条路
+	///随机种子需要自己在main函数里写
+	//////////////////////////////////////////////////////////////////////////
 	int victimId;
 	int count = 0;
 	while (1)

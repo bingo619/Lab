@@ -63,8 +63,8 @@ void Map::openOld(string folderDir, int gridWidth /* = 0*/)
 		}
 		nodes.push_back(pt);
 	}
-	printf("nodes count = %d\n", nodes.size());
-	printf("nodes not in area count = %d\n", count);
+	//printf("nodes count = %d\n", nodes.size());
+	//printf("nodes not in area count = %d\n", count);
 	nodeIfs.close();
 
 	//////////////////////////////////////////////////////////////////////////
@@ -138,8 +138,8 @@ void Map::openOld(string folderDir, int gridWidth /* = 0*/)
 		edge->lengthM = calEdgeLength(figure);
 		edges.push_back(edge);
 	}
-	printf("edges count = %d\n", edges.size());
-	printf("not in area edges count = %d\n", count);
+	//printf("edges count = %d\n", edges.size());
+	//printf("not in area edges count = %d\n", count);
 	geometryIfs.close();
 
 	//////////////////////////////////////////////////////////////////////////
@@ -178,9 +178,9 @@ void Map::openOld(string folderDir, int gridWidth /* = 0*/)
 	}
 	edgeIfs.close();
 
-	printf(">> reading map finished\n");
+	//printf(">> reading map finished\n");
 	createGridIndex();
-	printf(">> creating grid index finished\n");
+	//printf(">> creating grid index finished\n");
 }
 
 void Map::open(string folderDir, int gridWidth /* = 0 */ )
@@ -1557,8 +1557,8 @@ void Map::createGridIndex()
 			grid[i][j] = new list<Edge*>();
 		}
 	}
-	printf("Map index gridWidth = %d, gridHeight = %d\n", gridWidth, gridHeight);
-	cout << "gridSize = " << gridSizeDeg * GeoPoint::geoScale << "m" << endl;
+	//printf("Map index gridWidth = %d, gridHeight = %d\n", gridWidth, gridHeight);
+	//cout << "gridSize = " << gridSizeDeg * GeoPoint::geoScale << "m" << endl;
 	for (vector<Edge*>::iterator edgeIter = edges.begin(); edgeIter != edges.end(); edgeIter++)
 	{
 		createGridIndexForEdge((*edgeIter));

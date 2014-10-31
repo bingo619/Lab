@@ -1,5 +1,5 @@
 /* 
- * Last Updated at [2014/9/24 11:06] by wuhao
+ * Last Updated at [2014/10/25 15:07] by wuhao
  */
 #pragma once
 #include <iostream>
@@ -23,7 +23,7 @@ public:
 	Area* area;
 	string inputFolder = "D:\\trajectory\\singapore_data\\201202\\every day\\";
 	vector<string> inputFileNames;
-	string outputFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\";
+	string outputFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\"; //保存路径，可修改
 	string newMMTrajsFileName = "newMMTrajs.txt";
 	string newMMTrajsFileName_unmatched = "newMMTrajs_unmatched.txt";
 	ofstream newMMTrajsFile;
@@ -34,7 +34,8 @@ public:
 
 	
 	//driver func	
-	void genExpData();
+	void genExpData_1MM();
+	void genExpData_2MM();
 	void genSubSampledData(int interval, string folder, string fileName);
 	void deleteForGeo();
 	void deleteType1();
@@ -48,7 +49,8 @@ public:
 	
 
 private:
-	void genExpData(string rawTrajFilePath);
+	void genExpData_1MM(string rawTrajFilePath);
+	void genExpData_2MM(string rawTrajFilePath);
 	void extractUnmatchedTrajs();
 	void readRawTrajs(string rawTrajFilePath);
 	void doSplit();

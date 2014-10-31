@@ -10,6 +10,7 @@ using namespace std;
 extern Area area;
 extern int gridWidth;
 extern MapDrawer md;
+extern int roadId;
 
 struct Cluster
 {
@@ -54,7 +55,12 @@ public:
 	void drawClusters(MapDrawer& md);
 	vector<Cluster*> clusters;
 
-private:
+//private:
+	double d = 10.0; //矩形宽度
+	double l = 36.0; //矩形长度
+	double distThresM = 18; //cluster dist thres
+	double angleThres = 20.0 / 180.0 * PI; //cluster angle thres
+
 	PointGridIndex* ptIndex;
 	list<GeoPoint*> pts;
 	//计算点方向

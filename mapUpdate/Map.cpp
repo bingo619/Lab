@@ -1,5 +1,5 @@
 /* 
- * Last Updated at [2014/9/4 19:58] by wuhao
+ * Last Updated at [2014/10/29 22:41] by wuhao
  */
 #include "Map.h"
 
@@ -30,6 +30,7 @@ void Map::openOld(string folderDir, int gridWidth /* = 0*/)
 	*/
 	//////////////////////////////////////////////////////////////////////////
 	///排除规则：当edge的两个端点都在area外则不加入（node和edge对应位置放NULL）
+	/////[注意]同样两个端点可能存在两条不同的edge!!!!
 	//////////////////////////////////////////////////////////////////////////
 
 	this->gridWidth = gridWidth;
@@ -511,6 +512,28 @@ double Map::shortestPathLength(int ID1, int ID2, double dist1, double dist2, dou
 			break;
 		}
 		for (AdjNode* i = adjList[u]->next; i != NULL; i = i->next) {
+			
+			/**********************************************************/
+			/*test code starts from here*/
+			if (i->endPointId < 0 || i->endPointId >= maxNodeNum)
+			{
+				cout << "i error: " << i << endl;
+				system("pause");
+			}
+			if (u < 0 || u >= maxNodeNum)
+			{
+				cout << "u error: " << u << endl;
+				system("pause");
+			}
+			if (edges[i->edgeId] == NULL)
+			{
+				cout << "i.edgeId error: " << i->edgeId << endl;
+				system("pause");
+			}
+			/*test code ends*/
+			/**********************************************************/
+			
+			
 			if (dist[i->endPointId] > dist[u] + edges[i->edgeId]->lengthM) {
 				dist[i->endPointId] = dist[u] + edges[i->edgeId]->lengthM;
 				NODE_DIJKSTRA tmp(i->endPointId, dist[i->endPointId]);
@@ -852,15 +875,16 @@ void Map::delEdge(int edgeId, bool delBirectionEdges /* = true */)
 	AdjNode* currentAdjNode = adjList[startNodeId];
 	while (currentAdjNode->next != NULL)
 	{
-		if (currentAdjNode->next->endPointId == endNodeId)
+		if (currentAdjNode->next->endPointId == endNodeId && currentAdjNode->next->edgeId == edgeId) //[注意]同样两个端点可能存在两条不同的edge!!!!
 		{
 			AdjNode* delNode = currentAdjNode->next;
 			currentAdjNode->next = currentAdjNode->next->next;
 			delete delNode;
-			break;
+			break;			
 		}
 		currentAdjNode = currentAdjNode->next;
 	}
+
 	if (delBirectionEdges) //删除反向边
 	{
 		int reverseEdgeId = hasEdge(endNodeId, startNodeId);
@@ -1381,7 +1405,7 @@ void Map::deleteEdges(string path)
 	for (int i = 0; i < deletedEdgesId.size(); i++)
 	{
 		 delEdge(deletedEdgesId[i]);
-	}		
+	}	
 	ifs.close();
 }
 

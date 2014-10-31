@@ -25,9 +25,9 @@ using namespace std;
 using namespace Gdiplus;
 
 //Area area(1.294788, 1.327723, 103.784667, 103.825200); //small
-//Area area(1.294788, 1.393593, 103.784667, 103.906266); //big
+Area area(1.294788, 1.393593, 103.784667, 103.906266); //big
 //Area area(1.343593, 1.442398, 103.784667, 103.906266); //big2
-Area area(1.294788, 1.393593, 103.704667, 103.826266); //big3
+//Area area(1.294788, 1.393593, 103.704667, 103.826266); //big3
 int size = 5000;
 
 bool zoomed = true;
@@ -1841,7 +1841,8 @@ void deleteEdge()
 	roadNetwork.setArea(&area);
 	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\", 50);
 	ExpGenerator eg;
-	eg.deleteForGeo();
+	//eg.deleteForGeo();
+	eg.deleteType1();
 
 	md.setArea(&area);
 	md.setResolution(5000);
@@ -1856,7 +1857,7 @@ void deleteEdge()
 	exit(0);
 }
 
-void expTest()
+void genExpData_2MM()
 {
 	//////////////////////////////////////////////////////////////////////////
 	///生成两次匹配后的轨迹数据
@@ -1865,7 +1866,7 @@ void expTest()
 	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\", 50);
 	originalRoadNetwork.setArea(&area);
 	originalRoadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\", 50);
-	roadNetwork.deleteEdges("D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area3\\deletedEdges.txt");
+	roadNetwork.deleteEdges("D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area1_sparse\\deletedEdges.txt");
 
 	ExpGenerator eg;
 
@@ -1880,13 +1881,12 @@ void expTest()
 	eg.inputFileNames.push_back("logs_20120217_20120218.txt");
 	eg.inputFileNames.push_back("logs_20120218_20120219.txt");
 	eg.setArea(&area);
-
-	//eg.genExpData();
-	//system("pause");
-	//exit(0);
+	eg.genExpData();
+	system("pause");
+	exit(0);
 	/**********************************************************/
 	/*test code starts from here*/
-	TrajReader tr("D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area3\\newMMTrajs.txt");
+	TrajReader tr("D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area1_sparse\\newMMTrajs.txt");
 	list<Traj*> trajs;
 	tr.readTrajs(trajs);// , 50000);
 	/*test code ends*/
@@ -1949,7 +1949,8 @@ void main()
 	/**********************************************************/
 	/*test code starts from here*/
 	//deleteEdge();
-	expTest();
+	genExpData_2MM();
+	return;
 	/*test code ends*/
 	/**********************************************************/
 
