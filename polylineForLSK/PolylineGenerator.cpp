@@ -1,5 +1,6 @@
 /* 
- * Last Updated at [2014/9/15 14:08] by wuhao
+ * Last Updated at [2015/2/6 12:22] by wuhao
+ * version 1.0.1.1
  */
 #include "PolylineGenerator.h"
 
@@ -568,23 +569,19 @@ void PolylineGenerator::doProject()
 void PolylineGenerator::optimization()
 {
 	int k = polyline.size() - 1;
-	double convergeThreshold = 0.001;
-	double preGvi = 9999999999;
+	double convergeThreshold = 1;
 	//对每个点迭代
 	cout << "poly size " << polyline.size() << endl;
-	for (int _i = 0; _i < bigIterTimes; _i++)
+	for (int _i = 0; _i < 10; _i++)
 	{
 		for (int i = 0; i < polyline.size(); i++)
 		{
 			//直到这个点的调整幅度达到收敛阈值
 			//TEST: 先对每个点迭代3次
-			for (int iter = 0; iter < smallIterTimes; iter++)
+			double step = 0.2;
+			for (int iter = 0; iter < 100; iter++)
 			{
 				double Gvi = calculate(polyline[i].x, polyline[i].y, i);
-				if (abs(Gvi - preGvi) / Gvi < convergeThreshold)
-				{
-					break;
-				}
 				//printf("Gvi = %lf\n", Gvi);
 				//求梯度
 				double (PolylineGenerator::* pCalcFunc)(double, double, int); //一个类成员函数指针变量pmf的定义
@@ -652,19 +649,33 @@ void PolylineGenerator::optimizationEx()
 	double preGvi = 9999999999;
 	//对每个点迭代
 	cout << "poly size " << polyline.size() << endl;
-	for (int _i = 0; _i < 10; _i++)
+	
+	/**********************************************************/
+	/*test code starts from here*/
+	int iterCount = 0;
+	/*test code ends*/
+	/**********************************************************/
+	
+	for (int _i = 0; _i < bigIterTimes; _i++)
 	{
 		for (int i = 0; i < polyline.size(); i++)
 		{
 			//直到这个点的调整幅度达到收敛阈值
 			//TEST: 先对每个点迭代3次
-			for (int iter = 0; iter < 100; iter++)
+			for (int iter = 0; iter < smallIterTimes; iter++)
 			{
+				
+				/**********************************************************/
+				/*test code starts from here*/
+				iterCount++;
+				/*test code ends*/
+				/**********************************************************/
+				
 				double Gvi = calculate(polyline[i].x, polyline[i].y, i);
-				//if (abs(Gvi - preGvi) / Gvi < convergeThreshold)
-				//{
-				//		break;
-				//	} 
+				if (abs(Gvi - preGvi) / Gvi < convergeThreshold)
+				{
+					break;
+				}
 				//printf("Gvi = %lf\n", Gvi);
 				//求梯度
 				double (PolylineGenerator::* pCalcFunc)(double, double, int); //一个类成员函数指针变量pmf的定义
@@ -693,7 +704,7 @@ void PolylineGenerator::optimizationEx()
 				}
 				//求步长
 				//double step = calcStep(polyline[i].x, polyline[i].y, i);
-				double step = 0.3;
+				//double step = 0.3;
 				//printf("step = %lf, gv[%d] = %lf\n", step, i, Gvi);
 				//system("pause");
 				//移动点
@@ -712,6 +723,15 @@ void PolylineGenerator::optimizationEx()
 			}
 		}
 	}
+	
+	/**********************************************************/
+	/*test code starts from here*/
+	//printf("iterTimes = %d\n", iterCount);
+	//system("pause");
+	/*test code ends*/
+	/**********************************************************/
+	
+
 	//add a new point
 	double maxLength = 0;
 	int candidateV;
