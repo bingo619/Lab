@@ -99,7 +99,7 @@ void TrajReader::readTrajs(list<Traj*>& dest, int count /* = INF */)
 		{
 			break;
 		}
-		if (currentCount % 1000 == 0 && currentCount > 0)
+		if (currentCount % 10000 == 0 && currentCount > 0)
 		{
 			printf("read %d trajs\n", currentCount++);
 		}

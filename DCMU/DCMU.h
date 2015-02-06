@@ -1,8 +1,8 @@
 /* 
  * Last Updated at [2014/9/24 11:08] by wuhao
  */
-#define _CRT_SECURE_NO_WARNINGS
 #pragma once
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include "GeoPoint.h"
 #include "PointGridIndex.h"
@@ -12,6 +12,7 @@
 #include "RoadGenerator.h"
 #include "PointMover.h"
 #include "TrajReader.h"
+#include "StringOperator.h"
 
 using namespace std;
 

@@ -1,5 +1,9 @@
+/* 
+ * Last Updated at [2014/12/29 15:40] by wuhao
+ */
 #pragma once
 #include <iostream>
+#include <iomanip>
 #include "GeoPoint.h"
 #include "PointGridIndex.h"
 #include <list>
@@ -53,6 +57,7 @@ class PtCluster
 public:
 	void run(PointGridIndex* _ptIndex);
 	void drawClusters(MapDrawer& md);
+	void outputPtsDir(string outFilePath);
 	vector<Cluster*> clusters;
 
 //private:
@@ -62,11 +67,12 @@ public:
 	double angleThres = 20.0 / 180.0 * PI; //cluster angle thres
 
 	PointGridIndex* ptIndex;
-	list<GeoPoint*> pts;
+	list<GeoPoint*> pts; //存放ptIndex中的所有点，在调用calPtsDirs后即可生成
 	//计算点方向
 	void calPtsDirs();
 	void count(GeoPoint* p0, GeoPoint* p, vector<int>& countVec, double d, double l, double angleStep);
 	void calDir(GeoPoint* p0, double angleStep, double d, double l);
+	void drawPtsDir(MapDrawer& md);
 
 	//方向聚类
 	void doDirCluster();

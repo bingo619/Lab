@@ -1,5 +1,6 @@
 /*
-* Last Updated at [2014/9/15 13:08] by wuhao
+* Last Updated at [2014/12/29 15:04] by wuhao
+* version 2.0.1
 */
 #include "MapDrawer.h"
 
@@ -221,7 +222,17 @@ void MapDrawer::drawBoldLine(Gdiplus::Color color, double lat1, double lon1, dou
 	drawLine(color, pt5.X, pt5.Y, pt6.X, pt6.Y);
 }
 
-//Gdiplus::Color randomColor();
+Gdiplus::Color MapDrawer::randomColor()
+{
+	//////////////////////////////////////////////////////////////////////////
+	///随机生成一种颜色
+	//////////////////////////////////////////////////////////////////////////
+	int r = int(((double)rand()) / RAND_MAX * 255);
+	int g = int(((double)rand()) / RAND_MAX * 255);
+	int b = int(((double)rand()) / RAND_MAX * 255);
+	Gdiplus::Color color((byte)r, (byte)g, (byte)b);
+	return color;
+}
 
 void MapDrawer::drawMap(Gdiplus::Color color, std::string mapFilePath)
 {

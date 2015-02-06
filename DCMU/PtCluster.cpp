@@ -1,3 +1,6 @@
+/* 
+ * Last Updated at [2014/12/29 15:40] by wuhao
+ */
 #include "PtCluster.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -16,12 +19,45 @@ void PtCluster::drawClusters(MapDrawer& md)
 	}
 }
 
+void PtCluster::drawPtsDir(MapDrawer& md)
+{
+	for each (GeoPoint* pt in pts)
+	{
+		GeoPoint* ptEnd = new GeoPoint;
+		double length = 3 / GeoPoint::geoScale;
+		ptEnd->lat = pt->lat + length * sin(pt->direction);
+		ptEnd->lon = pt->lon + length * cos(pt->direction);
+		md.drawLine(Gdiplus::Color::Blue, pt->lat, pt->lon, ptEnd->lat, ptEnd->lon);
+	}
+}
+
+void PtCluster::outputPtsDir(string outFilePath)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///将pts中的轨迹点以及方向输出至outFilePath中
+	//////////////////////////////////////////////////////////////////////////
+	ofstream ofs(outFilePath);
+	ofs << fixed << showpoint << setprecision(8);
+	if (!ofs)
+	{
+		cout << "open file error" << endl;
+		system("pause");
+		exit(0);
+	}
+	for each (GeoPoint* pt in pts)
+	{
+		ofs << pt->time << " " << pt->lat << " " << pt->lon << " " << pt->direction << endl;
+	}
+	ofs.close();
+}
+
 void PtCluster::run(PointGridIndex* _ptIndex)
 {
 	this->ptIndex = _ptIndex;
 	calPtsDirs();
-	doDirCluster();
-	pts.clear();
+	drawPtsDir(md);
+	//doDirCluster();
+	//pts.clear();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -96,7 +132,7 @@ void PtCluster::calDir(GeoPoint* p0, double angleStep, double d, double l)
 	
 	/**********************************************************/
 	/*test code starts from here*/
-//	if (p0->mmRoadId != roadId)
+	//if (p0->mmRoadId != roadId)
 	//	return;
 	/*test code ends*/
 	/**********************************************************/

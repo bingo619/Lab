@@ -17,15 +17,23 @@ void DCMU::run()
 	extractForTC1();
 	return;*/
 
-	/**********************************************************/
-	/*test code starts from here*/
-	/*for (int i = 10; i >= 2; i--)
+	//对每一个block上色
+	for (int i = 0; i < ptIndexes.size(); i++)
 	{
-	ptIndexes.pop_back();
-	}*/
-	/*test code ends*/
-	/**********************************************************/
-	//降噪
+		Gdiplus::Color color = MapDrawer::randomColor();
+		PointGridIndex* ptIndex = ptIndexes[i];
+		for (int row = 0;  row < ptIndex->gridHeight; row++)
+		{
+			for (int col = 0; col < ptIndex->gridWidth; col++)
+			{
+				for each (GeoPoint* pt in *ptIndex->grid[row][col])
+				{
+					md.drawPoint(color, pt->lat, pt->lon);
+				}
+			}
+		}
+	}
+	//降噪，25m匹配距离的数据可以不用
  	//for (int i = 0; i < ptIndexes.size(); i++)
  	//{
 		///*MapDrawer md;
@@ -43,23 +51,27 @@ void DCMU::run()
 		//denoiser.runEx(ptIndexes[i]);
 		////denoiser.drawPts(md);
  	//}
-	//return;
+
 	//方向聚类
 	for (int i = 0; i < ptIndexes.size(); i++)
 	{
+		cout << "output i = " << i << endl;
 		ptCluster.run(ptIndexes[i]);
+		ptCluster.outputPtsDir(StringOperator::intToString(i) + ".txt");
+		ptCluster.pts.clear();
 		//ptCluster.drawClusters(md);
 		//cout << "!!!!!!!!!!!" << ptCluster.pts.size();
+		//用来画点方向，
 		/*for each (GeoPoint* pt in ptCluster.pts)
 		{
-		GeoPoint* ptEnd = new GeoPoint;
-		double length = 3 / GeoPoint::geoScale;
-		ptEnd->lat = pt->lat + length * sin(pt->direction);
-		ptEnd->lon = pt->lon + length * cos(pt->direction);
-		md.drawLine(Gdiplus::Color::Blue, pt->lat, pt->lon, ptEnd->lat, ptEnd->lon);
+			GeoPoint* ptEnd = new GeoPoint;
+			double length = 3 / GeoPoint::geoScale; //箭头长度为3m
+			ptEnd->lat = pt->lat + length * sin(pt->direction);
+			ptEnd->lon = pt->lon + length * cos(pt->direction);
+			md.drawLine(Gdiplus::Color::Blue, pt->lat, pt->lon, ptEnd->lat, ptEnd->lon);
 		}*/
 	}
-
+	
 	//生成路段
 	RoadGenerator rg;
 	rg.run(&allPtIndex, ptCluster.clusters);
@@ -104,14 +116,17 @@ void DCMU::extractForTC1()
 
 void DCMU::run1()
 {
+	//////////////////////////////////////////////////////////////////////////
+	///只测试一个block，也就是一个ptIndexes[i]
+	//////////////////////////////////////////////////////////////////////////
 	allPtIndex.drawGridLine(Gdiplus::Color::Green, md);
 	//网格聚类
-	int index = 0;
 	gridClustering();
-	denoiser.run(ptIndexes[index]);
-	
+
 	/**********************************************************/
 	/*test code starts from here*/
+	//用来看通过gridClustering后聚出来的每个block里面有多少点
+	//可以通过挑里面点的数量对应的index来做专项测试
 	for (int i = 0; i < ptIndexes.size(); i++)
 	{
 		int count = 0;
@@ -131,22 +146,8 @@ void DCMU::run1()
 	/*test code ends*/
 	/**********************************************************/
 	
-	
-
-	//ptMover.run(ptIndexes[index]);
-	//ptMover.drawPoints();
-	//return;
-	//降噪
-	// 	for (int i = 0; i < ptIndexes.size(); i++)
-	// 	{
-	// 
-	// 		/**********************************************************/
-	// 		/*test code starts from here*/
-	// 		denoiser.drawPts(md);
-	// 		/*test code ends*/
-	// 		/**********************************************************/
-	// 
-	// 	}
+	int index = 0; //这里填上想要专门测试的blockID
+	denoiser.run(ptIndexes[index]);
 
 	//方向聚类
 	ptCluster.run(ptIndexes[index]);
@@ -178,6 +179,9 @@ double cosAngle(GeoPoint* pt1, GeoPoint* pt2, GeoPoint* pt3)
 
 double getRoadDir(GeoPoint* pt, Edge* edge)
 {
+	//////////////////////////////////////////////////////////////////////////
+	///测试降噪厉害的版本用的，现在用不到
+	//////////////////////////////////////////////////////////////////////////
 	double minDist = INF;
 	double roadDir;
 	//遍历端点距离
@@ -251,6 +255,9 @@ double getRoadDir(GeoPoint* pt, Edge* edge)
 
 void DCMU::run3(int roadId, double rectW, double rectL)
 {
+	//////////////////////////////////////////////////////////////////////////
+	///测试降噪的厉害的版本用的，暂时现在不用
+	//////////////////////////////////////////////////////////////////////////
 	ptCluster.d = rectW;
 	ptCluster.l = rectL;
 	ptCluster.run(&allPtIndex);
@@ -391,7 +398,7 @@ void DCMU::gridClustering()
 				}
 			}
 		}
-	}	
+	}
 }
 
 void DCMU::dfs(int row, int col, bool** dfsState, vector<pair<int, int>>& connectingCompnt)
@@ -399,7 +406,9 @@ void DCMU::dfs(int row, int col, bool** dfsState, vector<pair<int, int>>& connec
 	//////////////////////////////////////////////////////////////////////////
 	///对网格[row][col]进行dfs遍历，其中标记访问为此函数职责，dfsState为访问状态，true为已访问
 	///将自己的索引编号存入connectingCompnt以记录连通分支信息
+	///ignoreThres 为设定的忽略网格的阈值，当网格内点数量小于该阈值则视为该网格为空
 	//////////////////////////////////////////////////////////////////////////
+	int ignoreThres = 3;
 	if (row >= allPtIndex.gridHeight || row < 0 || col >= allPtIndex.gridWidth || col < 0)
 		return;
 	if (dfsState[row][col])
@@ -407,7 +416,7 @@ void DCMU::dfs(int row, int col, bool** dfsState, vector<pair<int, int>>& connec
 	else
 	{  
 		dfsState[row][col] = true;
-		if (allPtIndex.grid[row][col]->size() <= 3) //网格里点数量小于一定程度的忽略
+		if (allPtIndex.grid[row][col]->size() <= ignoreThres) //网格里点数量小于一定程度的忽略
 			return;
 		connectingCompnt.push_back(make_pair(row, col));
 		dfs(row + 1, col, dfsState, connectingCompnt);

@@ -1,5 +1,7 @@
 /* 
- * Last Updated at [2014/9/4 19:58] by wuhao
+ * Last Updated at [2015/2/6 11:08] by wuhao
+ * version 1.0.1
+ * comments: 解决distM函数的内存泄漏问题
  */
 #pragma once
 #include "GeoPoint.h"

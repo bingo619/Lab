@@ -1,11 +1,12 @@
 /*
-* Last Updated at [2014/9/15 13:07] by wuhao
+* Last Updated at [2014/11/4 19:40] by wuhao
 */
 
 /*
 *	//使用方法
 *	MapDrawer md;
-*	md.setArea(minLat, maxLat, minLon, maxLon); //设置区域范围
+*   Area area; //设置一个area
+*	md.setArea(area); //将画布绑定到area
 *	md.setResolution(size); //图片宽度,单位为像素,高度自适应
 *	md.newBitmap(); //构建新图片,默认背景为透明
 *	md.lockBits(); //任何画图操作前必须调用这个
@@ -153,6 +154,7 @@ public:
 	//new
 	void drawInt(Gdiplus::Color color, int x, int y, int value);
 	void drawDouble(Gdiplus::Color color, int x, int y, double Value, int precision = 6);
+
 
 private:
 	ULONG_PTR gdiplusToken;

@@ -30,9 +30,9 @@ namespace OSMProcess
         static void Main(string[] args)
         {
             XmlDocument dom = new XmlDocument();
-            //dom.Load(@"D:\trajectory\singapore_data\singapore_map\map_new_in 2014-05-27.xml");
-           // dom.Load(@"D:\trajectory\beijing_data\beijing_map\map_new_in 2014-06-26.xml");
-            dom.Load(@"C:\Users\wuhao\Desktop\athens.xml");
+            dom.Load(@"D:\trajectory\singapore_data\singapore_map\map_new_in 2014-05-27.xml");
+            //dom.Load(@"D:\trajectory\beijing_data\beijing_map\map_new_in 2014-06-26.xml");
+            //dom.Load(@"C:\Users\wuhao\Desktop\athens.xml");
             Console.WriteLine("xml加载完毕！");
             StreamWriter edgeSw = new StreamWriter("edgeOSM.txt");
             StreamWriter nodeSw = new StreamWriter("nodeOSM.txt");
@@ -43,6 +43,7 @@ namespace OSMProcess
 
             foreach(XmlElement entry in dom.DocumentElement.ChildNodes)
             {
+                //xml文件按序存放，node一定会先读完
                 if(entry.Name.Equals("node"))
                 {
                     long oldId = long.Parse(entry.GetAttribute("id"));
@@ -73,17 +74,17 @@ namespace OSMProcess
                                 isBorder = true;
                         }
                     }
-                    if (isBorder == false)
+                    //if (isBorder == false)
+                    //   continue;
+                    if (isHighWay == false)
                         continue;
-                   // if (isHighWay == false)
-                    //    continue;
                     //处理头
                     Node fromNode;
                     if (nodeDic.TryGetValue(figure[0], out fromNode))
                     {
                         if (fromNode.newId == -1)
                         {
-                            fromNode.newId = nodeCount++;
+                            fromNode.newId = nodeCount++; //编号
                             extractedNodes.Add(fromNode);
                         }
                         edgeSw.Write(wayCount++ + "\t" + fromNode.newId);

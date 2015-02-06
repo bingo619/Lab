@@ -1,19 +1,20 @@
 /*
-* Last Updated at [2014/9/15 13:07] by wuhao
+* Last Updated at [2014/12/29 15:04] by wuhao
+* version 2.0.1
 */
-
 /*
 *	//使用方法
 *	MapDrawer md;
-*	md.setArea(minLat, maxLat, minLon, maxLon); //设置区域范围
+*   Area area; //设置一个area
+*	md.setArea(area); //将画布绑定到area
 *	md.setResolution(size); //图片宽度,单位为像素,高度自适应
 *	md.newBitmap(); //构建新图片,默认背景为透明
 *	md.lockBits(); //任何画图操作前必须调用这个
 *	drawsth(); //所有画图操作应该加在这儿
 * 	md.unlockBits(); //所有画图操作完成后加上此句以提交更改
-*  md.saveBitmap("out.png"); //另存为png图片
+*   md.saveBitmap("out.png"); //另存为png图片
 *
-*  //zooming使用方法
+*  //zooming使用方法 [已废弃]
 *  size = 15000;
 *  md.setArea(minLat, maxLat, minLon, maxLon)
 *  md.setResolution(size);
@@ -134,6 +135,7 @@ public:
 	void drawBoldLine(Gdiplus::Color color, int x1, int y1, int x2, int y2);
 	void drawBoldLine(Gdiplus::Color color, double lat1, double lon1, double lat2, double lon2); //画一条粗线
 	void drawMap(Gdiplus::Color color, std::string mapFilePath); //画地图，mapFilePath为地图文件路径，需OSM标准格式
+	static Gdiplus::Color randomColor(); //随机生成一种颜色
 
 	void newBitmap(); //新建画布，画图前需调用，需事先设定好area和resolution
 	void lockBits(); //画图前必须先调用这个，需在newBitmap()操作之后调用
@@ -151,8 +153,8 @@ public:
 	std::pair<double, double> screenToGeo(int screenX, int screenY); //将屏幕坐标转换成地理坐标,返回pair的first为lat,second为lon
 
 	//new
-	void drawInt(Gdiplus::Color color, int x, int y, int value);
-	void drawDouble(Gdiplus::Color color, int x, int y, double Value, int precision = 6);
+	void drawInt(Gdiplus::Color color, int x, int y, int value);  //在屏幕坐标(x,y)画一个整数，值为value
+	void drawDouble(Gdiplus::Color color, int x, int y, double Value, int precision = 6); //在屏幕坐标(x,y)画一个double，值为value，默认进度为6位
 
 
 private:

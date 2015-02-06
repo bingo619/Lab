@@ -1,5 +1,5 @@
 /* 
- * Last Updated at [2014/10/29 22:41] by wuhao
+ * Last Updated at [2014/11/4 19:33] by wuhao
  */
 #include "Map.h"
 
@@ -511,29 +511,7 @@ double Map::shortestPathLength(int ID1, int ID2, double dist1, double dist2, dou
 		if (u == ID2) {
 			break;
 		}
-		for (AdjNode* i = adjList[u]->next; i != NULL; i = i->next) {
-			
-			/**********************************************************/
-			/*test code starts from here*/
-			if (i->endPointId < 0 || i->endPointId >= maxNodeNum)
-			{
-				cout << "i error: " << i << endl;
-				system("pause");
-			}
-			if (u < 0 || u >= maxNodeNum)
-			{
-				cout << "u error: " << u << endl;
-				system("pause");
-			}
-			if (edges[i->edgeId] == NULL)
-			{
-				cout << "i.edgeId error: " << i->edgeId << endl;
-				system("pause");
-			}
-			/*test code ends*/
-			/**********************************************************/
-			
-			
+		for (AdjNode* i = adjList[u]->next; i != NULL; i = i->next) {		
 			if (dist[i->endPointId] > dist[u] + edges[i->edgeId]->lengthM) {
 				dist[i->endPointId] = dist[u] + edges[i->edgeId]->lengthM;
 				NODE_DIJKSTRA tmp(i->endPointId, dist[i->endPointId]);

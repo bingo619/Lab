@@ -625,7 +625,6 @@ void drawPtsDir(list<GeoPoint*>& pts, MapDrawer& md)
 	{
 		drawDir(pt, md);
 	}
-	pngFileName = ptsFileName + "_dir";
 }
 //dump out func
 void dumpPtsWithDir(list<GeoPoint*>& pts)

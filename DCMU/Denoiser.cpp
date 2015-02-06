@@ -1,5 +1,5 @@
 /* 
- * Last Updated at [2014/9/9 10:12] by wuhao
+ * Last Updated at [2015/2/6 10:59] by wuhao
  */
 #include "Denoiser.h"
 
@@ -8,6 +8,9 @@
 //////////////////////////////////////////////////////////////////////////
 void Denoiser::run(PointGridIndex* _ptIndex)
 {
+	//////////////////////////////////////////////////////////////////////////
+	///老版本，废弃
+	//////////////////////////////////////////////////////////////////////////
 	this->ptIndex = _ptIndex;
 	int k = 20;
 	double kNNThresholdM = 3;
@@ -253,6 +256,10 @@ void Denoiser::outlierReValidation(GeoPoint* pt)
 
 void Denoiser::updatePtIndex(PointGridIndex* ptIndex)
 {
+	//////////////////////////////////////////////////////////////////////////
+	///降噪后用来更新ptIndex里面的点，被认为是噪声的点将会被自动从中删除
+	///需要注意的是删除的只是点的指针，点被开辟空间如果需要释放的话，还是得手动加入代码删除
+	//////////////////////////////////////////////////////////////////////////
 	for (int row = 0; row < ptIndex->gridHeight; row++)
 	{
 		for (int col = 0; col < ptIndex->gridWidth; col++)
@@ -271,6 +278,8 @@ void Denoiser::updatePtIndex(PointGridIndex* ptIndex)
 }
 
 //////////////////////////////////////////////////////////////////////////
+//kNN降噪法需要推算的参数
+
 double computePhi(PointGridIndex* ptIndex)
 {
 	double gridSizeM = 3.0;
@@ -347,6 +356,7 @@ double computeR(PointGridIndex* ptIndex, int k)
 }
 
 //////////////////////////////////////////////////////////////////////////
+//这部分代码暂时不用
 int Denoiser::calDensity(GeoPoint* pt)
 {
 	vector<GeoPoint*> nearPts;
@@ -401,6 +411,8 @@ pair<int, double> Denoiser::findMaxDensity(GeoPoint* pt)
 	return make_pair(maxDensity, maxL);
 }
 
+//////////////////////////////////////////////////////////////////////////
+//新版本
 void Denoiser::outlierValidationEx(GeoPoint* pt, double kNNThresholdM)
 {
 	if (pt->lmd < kNNThresholdM)
@@ -453,7 +465,7 @@ void Denoiser::runEx(PointGridIndex* _ptIndex)
 	int count = 0;
 	int k = 10;
 	double kNNThresholdM = computeR(this->ptIndex, k);
-	kNNThresholdM *= relaxRatio;//or l = 10, ratio = 1.9
+	kNNThresholdM *= relaxRatio;//or k = 10, ratio = 1.9
 	cout << "kNNThresholdM = " << kNNThresholdM << endl;
 	//return;
 //	double kNNThresholdM = 2.3;

@@ -146,6 +146,10 @@ bool RoadGenerator::isBadClusterEx(Cluster* cluster, vector<Cluster*>& clusters,
 
 void RoadGenerator::genPolyLine(Cluster* cluster, MapDrawer& md)
 {
+	//////////////////////////////////////////////////////////////////////////
+	///为cluster生成一条polyline
+	///同时计算polyline的长度加权方向以及对应的cluster内的所有点的平均方向
+	//////////////////////////////////////////////////////////////////////////
 	if (cluster->pts.size() < 20)
 	{
 		return;
@@ -280,6 +284,10 @@ void RoadGenerator::drawPolyline(Cluster* cluster, MapDrawer& md, Gdiplus::Color
 
 void RoadGenerator::genAllPolyLines()
 {
+	//////////////////////////////////////////////////////////////////////////
+	///对每个聚类生成一条polyline
+	///同时使用isBadClusterEx来判断该cluster是否值得生成
+	//////////////////////////////////////////////////////////////////////////
 	for (int i = 0; i < clusters.size(); i++)
 	{
 		genPolyLine(clusters[i], md);

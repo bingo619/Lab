@@ -48,8 +48,9 @@ public:
 
 	MapMatcher(Map* roadNetwork);
 	void setMap(Map* roadNetwork);
+	//MapMatching关键函数，trajectory为需要地图匹配的轨迹(一条)，resultEdges为该轨迹上每个点按序匹配的路段指针，匹配失败的点其匹配的路段指针为NULL。
+	//rangeOfCandidateEdges为匹配范围限定，如果某采样点在该匹配范围内没有任何路段，则该点被认为匹配失败
 	void MapMatching(list<GeoPoint*> &trajectory, list<Edge*>& resultEdges, double rangeOfCandidateEdges = 50.0);
-
 private:
 	double EmissionProb(double t, double dist);
 	int GetStartColumnIndex(vector<Score> &row);

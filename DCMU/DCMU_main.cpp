@@ -13,7 +13,6 @@
 #include <iomanip>
 #include "PolylineGenerator.h"
 #include "PointGridIndex.h"
-#include "StringOperator.h"
 #include "ExpGenerator.h"
 #include "TrajDrawer.h"
 #include "DCMU.h"
@@ -27,9 +26,9 @@ using namespace Gdiplus;
 //Area area(1.26883, 1.27497, 103.79333, 103.80016); //port_不用这个了
 //Area area(1.26883, 1.27636, 103.79013, 103.80016); //port
 //Area area(1.294788, 1.327723, 103.784667, 103.825200); //small
-//Area area(1.294788, 1.393593, 103.784667, 103.906266); //area1
+Area area(1.294788, 1.393593, 103.784667, 103.906266); //area1
 //Area area(1.343593, 1.442398, 103.784667, 103.906266); //area2
-Area area(1.294788, 1.393593, 103.704667, 103.826266); //area3
+//Area area(1.294788, 1.393593, 103.704667, 103.826266); //area3
 
 Map roadNetwork;
 Map originalRoadNetwork; //未用
@@ -39,7 +38,7 @@ PointGridIndex allPtIndex;
 //double gridSizeM = 10.0;
 //int gridWidth = (area.maxLon - area.minLon) * GeoPoint::geoScale / gridSizeM;
 int gridWidth = 900;
-string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area3\\";
+string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area1\\";
 //string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\port area\\";
 
 list<GeoPoint*> allPts;
@@ -55,11 +54,11 @@ void initialization()
 	TrajReader tr(workspaceFolder + "30_newMMTrajs_unmatched.txt");
 	
 	tr.readTrajs(trajs);//, 50000);
-	int days = 1;
+	/*int days = 1;
 	int trajCount = double(trajs.size() * days) / 15.0;
 	trajs.clear();
 	tr.open(workspaceFolder + "30_newMMTrajs_unmatched.txt");
-	tr.readTrajs(trajs, trajCount);
+	tr.readTrajs(trajs, trajCount);*/
 	
 	list<GeoPoint*> allPts;
 	for each(Traj* traj in trajs)
@@ -70,13 +69,16 @@ void initialization()
 		}
 	}
 	allPtIndex.createIndex(allPts, &area, gridWidth);
-
 	md.setArea(&area);
-	md.setResolution(10000);
+	md.setResolution(5000);
 }
 
+////////////////////////////////////////////////////////////////////////
 void initializationForDenoiser()
 {
+	//////////////////////////////////////////////////////////////////////////
+	///用来专门测试denoiser的
+	//////////////////////////////////////////////////////////////////////////
 	roadNetwork.setArea(&area);
 	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\", 50);
 	//roadNetwork.deleteEdges(workspaceFolder + "deletedEdges.txt");
@@ -112,7 +114,9 @@ void initializationForDenoiser()
 
 void initializationForDirCompTest()
 {
-	
+	//////////////////////////////////////////////////////////////////////////
+	///用来专门测试计算方向的
+	//////////////////////////////////////////////////////////////////////////
 	roadNetwork.setArea(&area);
 	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\", 50);
 //	roadNetwork.deleteEdges(workspaceFolder + "deletedEdges.txt");
@@ -156,6 +160,7 @@ void initializationForDirCompTest()
 
 void genMMData()
 {
+	//用来将未匹配的数据进行地图匹配后输出
 	roadNetwork.setArea(&area);
 	roadNetwork.open("D:\\trajectory\\singapore_data\\singapore_map\\new\\", 50);
 	string trajFilePath = "D:\\trajectory\\singapore_data\\201202\\every day\\wy_MMTrajs1.txt";
@@ -198,7 +203,7 @@ void genMMData()
 	}
 	TrajReader::outputTrajs(trajs, "mmedTrajs.txt");
 	md.setArea(&area);
-	md.setResolution(5000);
+	md.setResolution(15000);
 	md.newBitmap();
 	md.lockBits();
 	TrajDrawer::drawMMTrajs(trajs, md, Color::Black, false, false, false, true);
@@ -265,6 +270,9 @@ void genExpData_1MM()
 
 void subSample()
 {
+	//////////////////////////////////////////////////////////////////////////
+	///用来生成60s,90s,120s的数据
+	//////////////////////////////////////////////////////////////////////////
 	ExpGenerator eg;
 	//eg.genSubSampledData(60, workspaceFolder, "newMMTrajs.txt");
 	eg.genSubSampledData(120, workspaceFolder, "newMMTrajs_unmatched.txt");
@@ -311,6 +319,7 @@ void dataAnalyzer(string dataPath)
 	}
 	cout << "平均采样率为： " << (double)totalTime / (double)intervalCount << "s" << endl;
 }
+////////////////////////////////////////////////////////////////////////
 
 void main()
 {
@@ -346,5 +355,5 @@ void main()
 	//
 	//allPtIndex.drawGridLine(Color::Green, md);
 	md.unlockBits();
-	md.saveBitmap("DCMU.png");
+	md.saveBitmap("Blocks.png");
 }
