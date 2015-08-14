@@ -51,7 +51,7 @@ MapDrawer md;
 
 vector<SampleType> testDataSet;
 
-void loadTestData(int count  = INF, bool draw = false );
+void loadTestData(double threshM_for_intersection, int count  = INF, bool draw = false );
 
 //////////////////////////////////////////////////////////////////////////
 ///只跑一遍
@@ -106,7 +106,7 @@ void outputTestData()
 
 void testForDistM()
 {
-	loadTestData();
+	loadTestData(25.0);
 	SMMD smmd(roadNetwork);
 	roadNetwork.loadPolylines(trainDataFolder + "polyline1.txt");
 	//md.lockBits();
@@ -1143,7 +1143,7 @@ void baseline(vector<SampleType>& testDataSet, vector<int>& prediction)
 		}
 		else
 		{
-			if (SMMD::distM_signed(nearEdges[0], testData.x) > 0) // <0 北京 >0新加坡
+			if (SMMD::distM_signed(nearEdges[0]->r_fig, testData.x) > 0) // <0 北京 >0新加坡
 				prediction.push_back(nearEdges[0]->id);
 			else
 				prediction.push_back(nearEdges[1]->id);
@@ -1151,10 +1151,9 @@ void baseline(vector<SampleType>& testDataSet, vector<int>& prediction)
 	}
 }
 
-void kNN(vector<SampleType>& testDataSet, vector<int>& prediction)
+void kNN(int k, vector<SampleType>& testDataSet, vector<int>& prediction)
 {
 	prediction.clear();
-	int k = 10;
 	KNNClassifier kNNClassifier(&roadNetwork, &area);
 	kNNClassifier.loadTrainData(trainDataPath, 500000);
 	for each (SampleType testData in testDataSet)
@@ -1187,10 +1186,12 @@ void main()
 	double gridSizeM = 25.0;
 	int gridWidth = (area.maxLon - area.minLon) * GeoPoint::geoScale / gridSizeM;
 	roadNetwork.setArea(&area);
-	//roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\old\\", gridWidth);
-	roadNetwork.open("D:\\trajectory\\beijing_data\\beijing_map\\new\\", gridWidth);
+	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\old\\", gridWidth);
+	//roadNetwork.open("D:\\trajectory\\beijing_data\\beijing_map\\new\\", gridWidth);
 	for (int i = 0; i < roadNetwork.edges.size(); i++)
 	{
+		if (roadNetwork.edges[i] == NULL)
+			continue;
 		for each (GeoPoint* figurePt in *roadNetwork.edges[i]->figure)
 		{
 			roadNetwork.edges[i]->r_fig.push_back(figurePt);
@@ -1203,8 +1204,18 @@ void main()
 	md.lockBits();
 	
 	loadTestData(25.0);// INF, true);
+	
 	roadNetwork.drawMap(Color::Blue, md);
 	roadNetwork.ptIndex.drawGridLine(Color::Green, md);
+
+	if (0)
+	{
+		vector<int> ans_knn;
+		int k = 20;
+		kNN(k, testDataSet, ans_knn);
+		double acc_knn = evaluate(testDataSet, ans_knn);
+		printf("acc_knn = %lf\n", acc_knn);
+	}
 
 	if (1)
 	{
@@ -1222,13 +1233,6 @@ void main()
 		printf("acc_baseline = %lf\n", acc_baseline);
 	}
 
-	if (1)
-	{
-		vector<int> ans_knn;
-		kNN(testDataSet, ans_knn);
-		double acc_knn = evaluate(testDataSet, ans_knn);
-		printf("acc_knn = %lf\n", acc_knn);
-	}
 	md.unlockBits();
 	md.saveBitmap("area2_SG.png");
 	system("pause");
