@@ -522,7 +522,7 @@ void evalSMMD_2(vector<SampleType>& tests)
 		if (i % 1000 == 0)
 			cout << i << endl;
 		SampleType testData = tests[i];
-
+		
 		/**********************************************************/
 		/*test code starts from here*/
 
@@ -1177,7 +1177,7 @@ double evaluate(vector<SampleType>& testDataSet, vector<int>& prediction)
 	}
 	return (double)correct / (double)all;
 }
-
+///
 void main()
 {
 	
