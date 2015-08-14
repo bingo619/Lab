@@ -20,7 +20,8 @@ public:
 	Map* roadNetwork;
 	//double gamma_d = 0.7812; //likelihood_d的指数分布的参数
 	double gamma_d = 0.727843;//0.738174; //likelihood_d的指数分布的参数
-	int doSMMD(GeoPoint* x, GeoPoint* d, double(SMMD::*p)(Edge*, GeoPoint*, GeoPoint*)); //done
+	int doSMMD_old(GeoPoint* x, GeoPoint* d, double(SMMD::*p)(Edge*, GeoPoint*, GeoPoint*)); //done
+	int doSMMD(GeoPoint* x, GeoPoint* d, double(SMMD::*p)(Edge*, GeoPoint*, GeoPoint*));
 
 	double probSMMD(Edge* r, GeoPoint* x, GeoPoint* d); //done, need test
 	double probSMM(Edge* r, GeoPoint* x, GeoPoint* d);

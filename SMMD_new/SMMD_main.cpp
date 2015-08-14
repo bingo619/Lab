@@ -329,17 +329,6 @@ void evalSMMD(vector<SampleType>& tests)
 			cout << i << endl;
 		SampleType testData = tests[i];
 
-		/**********************************************************/
-		/*test code starts from here*/
-		
-		if (testData.rId == 48067)
-		{
-			allCount--;
-			continue;
-			md.drawBigPoint(Color::Black, testData.x->lat, testData.x->lon);
-		}
-		/*test code ends*/
-		/**********************************************************/
 		if (testData.rId == -1)
 		{
 			allCount--;
@@ -739,7 +728,7 @@ void evalSMM()
 		
 		if (roadNetwork.edges[testData->mmRoadId] == NULL)
 			allCount--;
-		if (testData->mmRoadId == smmd.doSMMD(testData, testData, pFunc))
+		if (testData->mmRoadId == smmd.doSMMD_old(testData, testData, pFunc))
 			correctCount++;
 	}
 	printf("acc = %lf\n", (double)correctCount / (double)allCount);
@@ -1162,6 +1151,19 @@ void kNN(int k, vector<SampleType>& testDataSet, vector<int>& prediction)
 	}
 }
 
+void SMM(vector<SampleType>& testDataSet, vector<int>& prediction)
+{
+	prediction.clear();
+	SMMD smm(roadNetwork);
+	trainSMM(20.0, 100000);
+	double (SMMD::* pFunc)(Edge*, GeoPoint*, GeoPoint*); //一个类成员函数指针变量pFunc的定义
+	pFunc = &SMMD::probSMM;
+	for each (SampleType testData in testDataSet)
+	{
+		prediction.push_back(smm.doSMMD(testData.x, testData.x, pFunc));
+	}
+}
+
 double evaluate(vector<SampleType>& testDataSet, vector<int>& prediction)
 { 
 	int correct = 0, all = testDataSet.size();
@@ -1215,6 +1217,14 @@ void main()
 		kNN(k, testDataSet, ans_knn);
 		double acc_knn = evaluate(testDataSet, ans_knn);
 		printf("acc_knn = %lf\n", acc_knn);
+	}
+
+	if (1)
+	{
+		vector<int> ans_smm;
+		SMM(testDataSet, ans_smm);
+		double acc_smm = evaluate(testDataSet, ans_smm);
+		printf("acc_smm = %lf\n", acc_smm);
 	}
 
 	if (1)

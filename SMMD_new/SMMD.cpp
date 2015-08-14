@@ -10,7 +10,7 @@ SMMD::SMMD(Map& roadNetwork_)
 	roadNetwork = &roadNetwork_;
 }
 
-int SMMD::doSMMD(GeoPoint* x, GeoPoint* d, double (SMMD::*p)(Edge*, GeoPoint*, GeoPoint*))
+int SMMD::doSMMD_old(GeoPoint* x, GeoPoint* d, double (SMMD::*p)(Edge*, GeoPoint*, GeoPoint*))
 {
 	double thresholdM = 50.0;
 	vector<Edge*> candidateRoads;
@@ -29,6 +29,30 @@ int SMMD::doSMMD(GeoPoint* x, GeoPoint* d, double (SMMD::*p)(Edge*, GeoPoint*, G
 		*/
 
 
+	double maxProb = -1;
+	int returnId = -1;
+
+	for each(Edge* r in candidateRoads)
+	{
+		if (r->r_hat.size() == 0)
+			continue;
+		double tempProb = (this->*p)(r, x, d);
+		if (tempProb > maxProb)
+		{
+			maxProb = tempProb;
+			returnId = r->id;
+		}
+	}
+	return returnId;
+}
+
+int SMMD::doSMMD(GeoPoint* x, GeoPoint* d, double(SMMD::*p)(Edge*, GeoPoint*, GeoPoint*))
+{
+	double thresholdM = 50.0;
+	vector<Edge*> candidateRoads;
+	roadNetwork->getNearEdges(x->lat, x->lon, thresholdM, candidateRoads);
+	//roadNetwork->getNearEdges(x->lat, x->lon, 2, candidateRoads);
+	
 	double maxProb = -1;
 	int returnId = -1;
 
