@@ -22,7 +22,7 @@ string testDataFolder = workspaceFolder + "testData\\";
 string trainDataFolder = workspaceFolder + "trainData\\";
 
 
-int datasetID = 2;
+int datasetID = 1;
 string trainDataPath = trainDataFolder + "area" + StringOperator::intToString(datasetID) +"_50m.txt"; // +"area1_50m.txt";
 string testDataPath = testDataFolder + "testData3_area" + StringOperator::intToString(datasetID) +".txt";// "testData_area1.txt";
 //string testDataPath = testDataFolder + "testData3.txt";
@@ -30,8 +30,8 @@ string polylineFilePath = trainDataFolder + "polyline1_new.txt";
 string fakeCenterlineFilePath = trainDataFolder + "fakeCenterline" + StringOperator::intToString(datasetID) +".txt";
 string priorFilePath = trainDataFolder + "SMMD_prior3.txt";
 
-//Area area(1.342433, 1.353236, 103.864837, 103.875921); //area1
-Area area(1.3290, 1.3444, 103.8377, 103.8598); //area2
+Area area(1.342433, 1.353236, 103.864837, 103.875921); //area1
+//Area area(1.3290, 1.3444, 103.8377, 103.8598); //area2
 //Area area(1.3280, 1.3947, 103.8245, 103.9114); //area3
 //Area area(1.22, 1.5, 103.62, 104); //singapore half
 //Area area(39.398073, 40.366082, 115.770605, 117.079043); //beijing full
@@ -231,6 +231,9 @@ void loadTestData(double threshM_for_intersection, int count /* = INF */, bool d
 		GeoPoint* d = new GeoPoint(dLat, dLon);
 		SampleType td(x, d, rId);
 
+		//滤去在边界的点
+		if (roadNetwork.edges[rId]->r_hat.size() == 0)
+			continue;
 		//滤去路口的点
 		vector<GeoPoint*> oneNN;
 		roadNetwork.ptIndex.kNN_exact(x, 1, oneNN);
@@ -474,7 +477,7 @@ void evalSMMD_2(vector<SampleType>& tests)
 {
 	double (SMMD::* pFunc)(Edge*, GeoPoint*, GeoPoint*); //一个类成员函数指针变量pFunc的定义
 
-		bool smmdSwitch = true;
+	bool smmdSwitch = false;
 	if (smmdSwitch)
 	{
 		pFunc = &SMMD::probSMMD;
@@ -531,7 +534,7 @@ void evalSMMD_2(vector<SampleType>& tests)
 		/**********************************************************/
 		if (roadNetwork.edges[testData.rId] == NULL)
 		{
-			//allCount--;
+
 			continue;
 		}
 
@@ -571,9 +574,8 @@ void evalSMMD_2(vector<SampleType>& tests)
 		//滤去路口测试数据点
 		vector<GeoPoint*> oneNN;
 		roadNetwork.ptIndex.kNN_approx(testData.x, 1, 100.0, oneNN);
-		if (GeoPoint::distM(oneNN[0], testData.x) < 50.0)
+		if (GeoPoint::distM(oneNN[0], testData.x) < -50.0) //负数则不滤点
 		{
-			//allCount--;
 			crossCount++;
 			continue;
 		}
@@ -586,16 +588,14 @@ void evalSMMD_2(vector<SampleType>& tests)
 		}
 		if (nearEdges[0]->r_hat.size() == 0 || nearEdges[1]->r_hat.size() == 0)
 		{
-			//allCount--;
 			continue;
 		}
 
-		//最近两条之中都没的话排除
+		//最近两条之中都没的话排除 (75%->72%)
 		if (nearEdges[0]->id != testData.rId && nearEdges[1]->id != testData.rId)
 		{
-			//allCount--;
 			twoNNNoCount++;
-			continue;
+			//continue;
 		}
 
 		//偏的不厉害的排除
@@ -603,7 +603,6 @@ void evalSMMD_2(vector<SampleType>& tests)
 		int slotId1 = nearEdges[1]->getSlotId(testData.x);
 		if (abs(roadNetwork.edges[testData.rId]->thetas[slotId0].mu - roadNetwork.edges[testData.rId]->thetas[slotId1].mu) < 0)
 		{
-			//allCount--;
 			biasCount++;
 			continue;
 		}
@@ -626,7 +625,8 @@ void evalSMMD_2(vector<SampleType>& tests)
 		else
 		{
 			ratio = smmd.probSMM(nearEdges[0], testData.x, testData.d) / smmd.probSMM(nearEdges[1], testData.x, testData.d);
-			ans = smmd.probSMM(nearEdges[0], testData.x, testData.d) > smmd.probSMM(nearEdges[1], testData.x, testData.d) ? nearEdges[0]->id : nearEdges[1]->id;
+			//ans = smmd.probSMM(nearEdges[0], testData.x, testData.d) > smmd.probSMM(nearEdges[1], testData.x, testData.d) ? nearEdges[0]->id : nearEdges[1]->id;
+			ans = smmd.doSMMD(testData.x, testData.x, pFunc);
 		}
 		if (ratio < 1)
 			ratio = 1 / ratio;
@@ -658,7 +658,6 @@ void evalSMMD_2(vector<SampleType>& tests)
 		}
 		else
 		{
-			//allCount--;
 			probCount++;
 			continue;
 		}
@@ -671,7 +670,7 @@ void evalSMMD_2(vector<SampleType>& tests)
 	printf("wrong: %lf\n", (double)wrongCount_both / (double)wrongCount_our);
 	printf("SMMD_acc = %lf\n", (double)correctCount / (double)allCount);
 	printf("SMMDcorrectCount = %d, allCount = %d\n", correctCount, allCount);
-	printf("cross = %d, bias = %d, 2NN = %d, prob = %d, invalid = %d\n", crossCount, biasCount, twoNNNoCount, probCount, invalidCount);
+	printf("allCount = %d, cross = %d, bias = %d, 2NN = %d, prob = %d, invalid = %d\n", allCount, crossCount, biasCount, twoNNNoCount, probCount, invalidCount);
 }
 
 void evalSMM()
@@ -685,6 +684,7 @@ void evalSMM()
 	//构造SMM testData
 	list <GeoPoint*> testSMMDataSet;
 	TrajReader tReader(trainDataPath);
+	//TrajReader tReader(testDataPath);
 	tReader.readGeoPoints(testSMMDataSet, &area, 200000);
 	int allCount = testSMMDataSet.size();
 
@@ -708,19 +708,20 @@ void evalSMM()
 			allCount--;
 			continue;
 		}
-		int slotId = roadNetwork.edges[testData->mmRoadId]->getSlotId(testData);
+		/*int slotId = roadNetwork.edges[testData->mmRoadId]->getSlotId(testData);
 		if (abs(roadNetwork.edges[testData->mmRoadId]->thetas[slotId].mu) < 5)
 		{
 			allCount--;
 			continue;
-		}
-		vector<GeoPoint*> oneNN;
+		}*/
+		//过滤路口
+		/*vector<GeoPoint*> oneNN;
 		roadNetwork.ptIndex.kNN_approx(testData, 1, 100.0, oneNN);
 		if (GeoPoint::distM(oneNN[0], testData) < 50.0)
 		{
 			allCount--;
 			continue;
-		}
+		}*/
 
 		md.drawBigPoint(Color::Red, testData->lat, testData->lon);
 		
@@ -1155,7 +1156,7 @@ void SMM(vector<SampleType>& testDataSet, vector<int>& prediction)
 {
 	prediction.clear();
 	SMMD smm(roadNetwork);
-	trainSMM(20.0, 100000);
+	trainSMM(25.0, 500000);
 	double (SMMD::* pFunc)(Edge*, GeoPoint*, GeoPoint*); //一个类成员函数指针变量pFunc的定义
 	pFunc = &SMMD::probSMM;
 	for each (SampleType testData in testDataSet)
@@ -1189,6 +1190,7 @@ void main()
 	int gridWidth = (area.maxLon - area.minLon) * GeoPoint::geoScale / gridSizeM;
 	roadNetwork.setArea(&area);
 	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\old\\", gridWidth);
+	roadNetwork.loadPolylines(fakeCenterlineFilePath);
 	//roadNetwork.open("D:\\trajectory\\beijing_data\\beijing_map\\new\\", gridWidth);
 	for (int i = 0; i < roadNetwork.edges.size(); i++)
 	{
@@ -1205,10 +1207,19 @@ void main()
 	md.newBitmap();
 	md.lockBits();
 	
-	loadTestData(25.0);// INF, true);
+	loadTestData(-1);// INF, true);
 	
 	roadNetwork.drawMap(Color::Blue, md);
 	roadNetwork.ptIndex.drawGridLine(Color::Green, md);
+
+	
+	/**********************************************************/
+	/*test code starts from here*/
+	trainSMM(25.0, 100000);
+	evalSMMD_2(testDataSet);
+	/*test code ends*/
+	/**********************************************************/
+	
 
 	if (0)
 	{
@@ -1219,7 +1230,7 @@ void main()
 		printf("acc_knn = %lf\n", acc_knn);
 	}
 
-	if (1)
+	if (0)
 	{
 		vector<int> ans_smm;
 		SMM(testDataSet, ans_smm);
