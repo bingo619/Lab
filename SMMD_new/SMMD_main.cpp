@@ -17,7 +17,9 @@
 using namespace std;
 using namespace Gdiplus;
 
-string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\SMMD\\";
+string workspaceFolder = "C:\\Downloads\\TrajData\\SMMD\\";
+//string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\SMMD\\";
+string mapFileFolder = "C:\\Downloads\\TrajData\\map\\old\\";
 string testDataFolder = workspaceFolder + "testData\\";
 string trainDataFolder = workspaceFolder + "trainData\\";
 
