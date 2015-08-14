@@ -1191,7 +1191,8 @@ void main()
 	double gridSizeM = 25.0;
 	int gridWidth = (area.maxLon - area.minLon) * GeoPoint::geoScale / gridSizeM;
 	roadNetwork.setArea(&area);
-	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\old\\", gridWidth);
+	//roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\old\\", gridWidth);
+	roadNetwork.openOld(mapFileFolder, gridWidth);
 	roadNetwork.loadPolylines(fakeCenterlineFilePath);
 	//roadNetwork.open("D:\\trajectory\\beijing_data\\beijing_map\\new\\", gridWidth);
 	for (int i = 0; i < roadNetwork.edges.size(); i++)
