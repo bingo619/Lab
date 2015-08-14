@@ -1,7 +1,8 @@
 /*
-* Last Updated at [2014/12/29 15:04] by wuhao
-* version 2.0.1
+* Last Updated at [2015/4/30 20:53] by wuhao
+* version 2.1.0
 */
+
 #include "MapDrawer.h"
 
 
@@ -140,7 +141,7 @@ void MapDrawer::drawBigPoint(Gdiplus::Color color, int x, int y)
 	drawPoint(color, pt.X, pt.Y);
 }
 
-void MapDrawer::drawLine(Gdiplus::Color color, int x1, int y1, int x2, int y2)
+void MapDrawer::drawLine(Gdiplus::Color color, int x1, int y1, int x2, int y2, Mode mode /*= Mode::NORMAL */)
 {
 	/*
 	if (x1 == r_width)
@@ -163,38 +164,64 @@ void MapDrawer::drawLine(Gdiplus::Color color, int x1, int y1, int x2, int y2)
 	{
 		return;
 	}
+	//////////////////////////////////////
+	int blank = 0, line = 0;
+	switch (mode)
+	{
+	case Mode::NORMAL:
+		blank = 0, line = ENDLESSLINE;
+		break;
+	case Mode::DASHLINE:
+		blank = BLANK, line = LINE;
+		break;
+	default:break;
+	}
+	//////////////////////////////////////
 	if (abs(x1 - x2) >= abs(y1 - y2))
-		bresenhamDrawLine_x(color, x1, y1, x2, y2);
+		bresenhamDrawLine_x(color, x1, y1, x2, y2, line, blank);
 	else
-		bresenhamDrawLine_y(color, x1, y1, x2, y2);
+		bresenhamDrawLine_y(color, x1, y1, x2, y2, line, blank);
 }
 
-void MapDrawer::drawLine(Gdiplus::Color color, double lat1, double lon1, double lat2, double lon2)
+void MapDrawer::drawLine(Gdiplus::Color color, double lat1, double lon1, double lat2, double lon2, Mode mode /*= Mode::NORMAL*/)
 {
 	if (!inArea(lat1, lon1) && !inArea(lat2, lon2))
 	{
 		return;
 	}
+	//////////////////////////////////////
+	int blank = 0, line = 0;
+	switch (mode)
+	{
+	case Mode::NORMAL:
+		blank = 0, line = ENDLESSLINE;
+		break;
+	case Mode::DASHLINE:
+		blank = BLANK, line = LINE;
+		break;
+	default:break;
+	}
+	//////////////////////////////////////
 	Gdiplus::Point pt1, pt2;
 	pt1 = geoToScreen(lat1, lon1);
 	pt2 = geoToScreen(lat2, lon2);
-	drawLine(color, pt1.X, pt1.Y, pt2.X, pt2.Y);
+	drawLine(color, pt1.X, pt1.Y, pt2.X, pt2.Y, mode);
 }
 
-void MapDrawer::drawBoldLine(Gdiplus::Color color, int x1, int y1, int x2, int y2)
+void MapDrawer::drawBoldLine(Gdiplus::Color color, int x1, int y1, int x2, int y2, Mode mode /*= Mode::NORMAL*/)
 {
 	if (!inArea(x1, y1) && !inArea(x2, y2))
 	{
 		return;
 	}
-	drawLine(color, x1, y1, x2, y2);
-	drawLine(color, x1 + 1, y1, x2 + 1, y2);
-	drawLine(color, x1 - 1, y1, x2 - 1, y2);
-	drawLine(color, x1, y1 + 1, x2, y2 + 1);
-	drawLine(color, x1, y1 - 1, x2, y2 - 1);
+	drawLine(color, x1, y1, x2, y2, mode);
+	drawLine(color, x1 + 1, y1, x2 + 1, y2, mode);
+	drawLine(color, x1 - 1, y1, x2 - 1, y2, mode);
+	drawLine(color, x1, y1 + 1, x2, y2 + 1, mode);
+	drawLine(color, x1, y1 - 1, x2, y2 - 1, mode);
 }
 
-void MapDrawer::drawBoldLine(Gdiplus::Color color, double lat1, double lon1, double lat2, double lon2)
+void MapDrawer::drawBoldLine(Gdiplus::Color color, double lat1, double lon1, double lat2, double lon2, Mode mode /*= Mode::NORMAL*/)
 {
 	if (!inArea(lat1, lon1) && !inArea(lat2, lon2))
 	{
@@ -203,23 +230,23 @@ void MapDrawer::drawBoldLine(Gdiplus::Color color, double lat1, double lon1, dou
 	Gdiplus::Point pt1, pt2, pt3, pt4, pt5, pt6;
 	pt1 = geoToScreen(lat1, lon1);
 	pt2 = geoToScreen(lat2, lon2);
-	drawLine(color, pt1.X, pt1.Y, pt2.X, pt2.Y);
+	drawLine(color, pt1.X, pt1.Y, pt2.X, pt2.Y, mode);
 	pt3.X = pt1.X + 1;
 	pt5.X = pt1.X - 1;
 	pt5.Y = pt3.Y = pt1.Y;
 	pt4.X = pt2.X + 1;
 	pt6.X = pt2.X - 1;
 	pt6.Y = pt4.Y = pt2.Y;
-	drawLine(color, pt3.X, pt3.Y, pt4.X, pt4.Y);
-	drawLine(color, pt5.X, pt5.Y, pt6.X, pt6.Y);
+	drawLine(color, pt3.X, pt3.Y, pt4.X, pt4.Y, mode);
+	drawLine(color, pt5.X, pt5.Y, pt6.X, pt6.Y, mode);
 	pt3.Y = pt1.Y + 1;
 	pt5.Y = pt1.Y - 1;
 	pt5.X = pt3.X = pt1.X;
 	pt4.Y = pt2.Y + 1;
 	pt6.Y = pt2.Y - 1;
 	pt6.X = pt4.X = pt2.X;
-	drawLine(color, pt3.X, pt3.Y, pt4.X, pt4.Y);
-	drawLine(color, pt5.X, pt5.Y, pt6.X, pt6.Y);
+	drawLine(color, pt3.X, pt3.Y, pt4.X, pt4.Y, mode);
+	drawLine(color, pt5.X, pt5.Y, pt6.X, pt6.Y, mode);
 }
 
 Gdiplus::Color MapDrawer::randomColor()
@@ -359,7 +386,7 @@ int MapDrawer::GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 	return -1;  // Failure
 }
 
-void MapDrawer::bresenhamDrawLine_x(Gdiplus::Color color, int x1, int y1, int x2, int y2)
+void MapDrawer::bresenhamDrawLine_x(Gdiplus::Color color, int x1, int y1, int x2, int y2, int line /*= ENDLESSLINE*/, int blank /*= 0*/)
 {
 	int _x1, _y1, _x2, _y2;
 	if (x1 < x2)
@@ -382,9 +409,19 @@ void MapDrawer::bresenhamDrawLine_x(Gdiplus::Color color, int x1, int y1, int x2
 	e = -dx;
 	x = _x1;
 	y = _y1;
-	for (int i = 0; i <= dx; i++)
+	///////////////
+	int step = 0;
+	///////////////
+	for (int i = 0; i <= dx; i++, step++)
 	{
-		drawPoint(color, x, y);
+		if (step >= line + blank)
+		{
+			step = 0;
+		}
+		if (step < line)
+		{
+			drawPoint(color, x, y);
+		}
 		x++;
 		e += 2 * dy;
 		if (e >= 0)
@@ -398,7 +435,7 @@ void MapDrawer::bresenhamDrawLine_x(Gdiplus::Color color, int x1, int y1, int x2
 	}
 }
 
-void MapDrawer::bresenhamDrawLine_y(Gdiplus::Color color, int x1, int y1, int x2, int y2)
+void MapDrawer::bresenhamDrawLine_y(Gdiplus::Color color, int x1, int y1, int x2, int y2, int line /*= ENDLESSLINE*/, int blank /*= 0*/)
 {
 	int _x1, _y1, _x2, _y2;
 	if (y1 < y2)
@@ -421,9 +458,19 @@ void MapDrawer::bresenhamDrawLine_y(Gdiplus::Color color, int x1, int y1, int x2
 	e = -dy;
 	y = _y1;
 	x = _x1;
-	for (int i = 0; i <= dy; i++)
+	///////////////
+	int step = 0;
+	///////////////
+	for (int i = 0; i <= dy; i++, step++)
 	{
-		drawPoint(color, x, y);
+		if (step >= line + blank)
+		{
+			step = 0;
+		}
+		if (step < line)
+		{
+			drawPoint(color, x, y);
+		}
 		y++;
 		e += 2 * dx;
 		if (e >= 0)
@@ -578,3 +625,108 @@ void MapDrawer::drawDouble(Gdiplus::Color color, int x, int y, double Value, int
 		}
 	}
 }
+
+//////////////////////////////////////////////// new begin //////////////////////////////////////////////////////////////////
+
+Gdiplus::Color MapDrawer::getColor(double value, double minvalue, double maxvalue)
+{
+	//////////////////////////////////////////////////////////////////////////////////
+	/// 将[minvalue，maxvalue]区间上的value值映射到RGB颜色空间[0,255]
+	/// R[0,255], G[255,0], B[0~255~0]
+	///////////////////////////////////////////////////////////////////////////////////
+	double midvalue = (minvalue + maxvalue) / 2;
+	double interval = maxvalue - minvalue;
+	int red = fabs(value - minvalue) * 255 / interval;
+	int green = fabs(value - maxvalue) * 255 / interval;
+	int blue = 0;
+	if (value > midvalue)
+	{
+		blue = fabs(value - maxvalue) * 255 * 2 / interval;
+	}
+	else
+	{
+		blue = fabs(value - minvalue) * 255 * 2 / interval;
+	}
+	Gdiplus::Color color(red, green, blue);
+	return color;
+}
+
+Gdiplus::Color MapDrawer::getColor(int value, int minvalue, int maxvalue)
+{
+	//////////////////////////////////////////////////////////////////////////////////
+	/// 将[minvalue，maxvalue]区间上的value值映射到RGB颜色空间[0,255]
+	/// R[0,255], G[255,0], B[0~255~0]
+	///////////////////////////////////////////////////////////////////////////////////
+	int midvalue = (minvalue + maxvalue) / 2;
+	int interval = maxvalue - minvalue;
+	int red = (value - minvalue) * 255 / interval;
+	int green = (value - maxvalue) * 255 / interval;
+	int blue = abs(value - midvalue) * 255 * 2 / interval;
+	Gdiplus::Color color(red, green, blue);
+	return color;
+}
+
+void MapDrawer::printSample(double minvalue, double maxvalue, double startId, double endId, double stepLen/* = 1*/, int blockHeight /*= 30*/, int blockWidth /*= 50*/, int blockMargin /*= 10*/, int margin /*= 1500*/)
+{
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	/// 打印样例图
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	int verticalstart = margin;
+	for (double i = startId; i < endId; i += stepLen)
+	{
+		Gdiplus::Color color = getColor(i, minvalue, maxvalue);
+
+		for (int j = 0; j < blockHeight; ++j)
+		{
+			this->drawLine(color, margin, verticalstart, margin + blockWidth, ++verticalstart);
+		}
+		this->drawInt(color, margin + blockWidth + blockMargin, verticalstart - blockHeight / 2, i);
+		verticalstart += blockMargin;
+	}
+}
+
+void MapDrawer::printSample(int minvalue, int maxvalue, int startId, int endId, int stepLen/* = 1*/, int blockHeight /*= 30*/, int blockWidth /*= 50*/, int blockMargin /*= 10*/, int margin /*= 1500*/)
+{
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	/// 打印样例图
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	int verticalstart = margin;
+	for (int i = startId; i < endId; i += stepLen)
+	{
+		Gdiplus::Color color = getColor(i, minvalue, maxvalue);
+
+		for (int j = 0; j < blockHeight; ++j)
+		{
+			this->drawLine(color, margin, verticalstart, margin + blockWidth, ++verticalstart);
+		}
+		this->drawInt(color, margin + blockWidth + blockMargin, verticalstart - blockHeight / 2, i);
+		verticalstart += blockMargin;
+	}
+}
+
+void MapDrawer::drawBoldSquare(Gdiplus::Color color, double lat1, double lon1, double lat2, double lon2)
+{
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/// 传入参数：左上角坐标(lat1, lon1)，右下角坐标(lat2, lon2)
+	/// 作用： 绘制实心方块
+	/// 【TO DO!】
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	if (lat1 > lat2 && lon1 > lon2)
+	{
+		double tlat = lat1, tlon = lon1;
+		lat1 = lat2, lat2 = tlat;
+		lon1 = lon2, lon2 = tlon;
+	}
+	else if (lat1 > lat2 || lon2 > lon2)
+	{
+		std::cout << "cordination error!" << std::endl;
+		return;
+	}
+	double delt = fabs(lat2 - lat1) / 100;
+	for (double x = lat1; x <= lat2; x += delt)
+	{
+		//std::cout <<lat1 <<" " << x << " " << lat2 << std::endl;
+		this->drawBoldLine(color, x, lon1, x, lon2);
+	}
+}
+//////////////////////////////////////////////// new end //////////////////////////////////////////////////////////////////

@@ -1,5 +1,8 @@
 /*
-* Last Updated at [2014/11/4 19:40] by wuhao
+* Last Updated at [2015/4/30 20:54] by wuhao
+* version 2.1.0
+* Updated at [2015/04] by maojiangyun
+* 增加画虚线功能,增加热度图功能 @20150430
 */
 
 /*
@@ -12,9 +15,9 @@
 *	md.lockBits(); //任何画图操作前必须调用这个
 *	drawsth(); //所有画图操作应该加在这儿
 * 	md.unlockBits(); //所有画图操作完成后加上此句以提交更改
-*  md.saveBitmap("out.png"); //另存为png图片
+*   md.saveBitmap("out.png"); //另存为png图片
 *
-*  //zooming使用方法
+*  //zooming使用方法 [已废弃]
 *  size = 15000;
 *  md.setArea(minLat, maxLat, minLon, maxLon)
 *  md.setResolution(size);
@@ -36,6 +39,14 @@
 #include "GeoPoint.h"
 //using namespace Gdiplus;
 #pragma comment(lib,"gdiplus.lib")
+#define STEPLEN 1
+#define BLOCKHEIGHT 10
+#define BLOCKWIDTH 10
+#define DISTANCEINERBLOCK 1
+#define MARGINFROMBOUNDRY 10
+#define ENDLESSLINE 99999999
+#define BLANK 20 //虚线空白间隔，单位像素
+#define LINE 20 //虚线中实线间隔，单位像素
 
 static bool minus[5][4] = {
 	0, 0, 0, 0,
@@ -115,6 +126,12 @@ static bool point[5][2] = {
 	1, 0
 };
 
+enum Mode
+{
+	NORMAL, //正常线
+	DASHLINE, //虚线
+};
+
 class MapDrawer
 {
 public:
@@ -130,11 +147,12 @@ public:
 	void drawPoint(Gdiplus::Color color, double lat, double lon); //在地里坐标(lat,lon)对应的图上画一个像素点
 	void drawBigPoint(Gdiplus::Color color, int x, int y); //在屏幕(x,y)画一个十字点
 	void drawBigPoint(Gdiplus::Color color, double lat, double lon); //在地里坐标(lat,lon)对应的图上画一个十字点
-	void drawLine(Gdiplus::Color color, int x1, int y1, int x2, int y2);
-	void drawLine(Gdiplus::Color color, double lat1, double lon1, double lat2, double lon2);
-	void drawBoldLine(Gdiplus::Color color, int x1, int y1, int x2, int y2);
-	void drawBoldLine(Gdiplus::Color color, double lat1, double lon1, double lat2, double lon2); //画一条粗线
+	void drawLine(Gdiplus::Color color, int x1, int y1, int x2, int y2, Mode mode = Mode::NORMAL);
+	void drawLine(Gdiplus::Color color, double lat1, double lon1, double lat2, double lon2, Mode mode = Mode::NORMAL);
+	void drawBoldLine(Gdiplus::Color color, int x1, int y1, int x2, int y2, Mode mode = Mode::NORMAL);
+	void drawBoldLine(Gdiplus::Color color, double lat1, double lon1, double lat2, double lon2, Mode mode = Mode::NORMAL); //画一条粗线
 	void drawMap(Gdiplus::Color color, std::string mapFilePath); //画地图，mapFilePath为地图文件路径，需OSM标准格式
+	static Gdiplus::Color randomColor(); //随机生成一种颜色
 
 	void newBitmap(); //新建画布，画图前需调用，需事先设定好area和resolution
 	void lockBits(); //画图前必须先调用这个，需在newBitmap()操作之后调用
@@ -152,17 +170,24 @@ public:
 	std::pair<double, double> screenToGeo(int screenX, int screenY); //将屏幕坐标转换成地理坐标,返回pair的first为lat,second为lon
 
 	//new
-	void drawInt(Gdiplus::Color color, int x, int y, int value);
-	void drawDouble(Gdiplus::Color color, int x, int y, double Value, int precision = 6);
+	void drawInt(Gdiplus::Color color, int x, int y, int value);  //在屏幕坐标(x,y)画一个整数，值为value
+	void drawDouble(Gdiplus::Color color, int x, int y, double Value, int precision = 6); //在屏幕坐标(x,y)画一个double，值为value，默认进度为6位
 
+	//////////////////////////////////////////////// new begin //////////////////////////////////////////////////////////////////
+	static Gdiplus::Color getColor(double value, double minvalue = 0, double maxvalue = 255);
+	static Gdiplus::Color getColor(int value, int minvalue = 0, int maxvalue = 255);
+	void printSample(double minvalue, double maxvalue, double startId, double endId, double stepLen = STEPLEN, int blockHeight = BLOCKHEIGHT, int blockWidth = BLOCKWIDTH, int blockMargin = DISTANCEINERBLOCK, int margin = MARGINFROMBOUNDRY);
+	void printSample(int minvalue, int maxvalue, int startId, int endId, int stepLen = STEPLEN, int blockHeight = BLOCKHEIGHT, int blockWidth = BLOCKWIDTH, int blockMargin = DISTANCEINERBLOCK, int margin = MARGINFROMBOUNDRY);
+	void drawBoldSquare(Gdiplus::Color color, double lat1, double lon1, double lat2, double lon2);
+	//////////////////////////////////////////////// new end //////////////////////////////////////////////////////////////////
 
 private:
 	ULONG_PTR gdiplusToken;
 	Gdiplus::Bitmap* bm;
 	Gdiplus::BitmapData* bmData;
 
-	void MapDrawer::bresenhamDrawLine_x(Gdiplus::Color color, int x1, int y1, int x2, int y2);
-	void MapDrawer::bresenhamDrawLine_y(Gdiplus::Color color, int x1, int y1, int x2, int y2);
+	void MapDrawer::bresenhamDrawLine_x(Gdiplus::Color color, int x1, int y1, int x2, int y2, int line = ENDLESSLINE, int blank = 0);
+	void MapDrawer::bresenhamDrawLine_y(Gdiplus::Color color, int x1, int y1, int x2, int y2, int line = ENDLESSLINE, int blank = 0);
 	int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
 	wchar_t* CharToWchar(const char* c);
 };

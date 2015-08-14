@@ -22,7 +22,7 @@ void ExpGenerator::genExpData()
 
 void ExpGenerator::genExpData(string rawTrajFilePath)
 {
-	double mmThres = 25.0;
+	double mmThres = 50.0;
 	readRawTrajs(rawTrajFilePath);
 	doSplit();
 	deleteList(rawTrajs); //ÊÍ·ÅrawTrajsÄÚ´æ

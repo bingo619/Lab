@@ -10,6 +10,7 @@
 #include "GeoPoint.h"
 #include "TrajReader.h"
 #include "MapMatching.h"
+#include "TrajDrawer.h"
 
 using namespace std;
 
@@ -21,9 +22,9 @@ class ExpGenerator
 {
 public:
 	Area* area;
-	string inputFolder = "D:\\trajectory\\singapore_data\\201202\\every day\\";
+	string inputFolder = "G:\\workspace\\1\\";// = "D:\\trajectory\\singapore_data\\201202\\every day\\";
 	vector<string> inputFileNames;
-	string outputFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\"; //保存路径，可修改
+	string outputFolder = "G:\\workspace\\1\\"; // "D:\\trajectory\\singapore_data\\experiments\\big area\\"; //保存路径，可修改
 	string newMMTrajsFileName = "newMMTrajs.txt";
 	string newMMTrajsFileName_unmatched = "newMMTrajs_unmatched.txt";
 	ofstream newMMTrajsFile;
@@ -61,6 +62,6 @@ private:
 	void deleteList(list<Traj*>& victimList);
 	//parameters in split func
 	double limitSpeed = 50.0;
-	double limitDist = 400;
+	double limitDist = 800;
 	double limitTime = 100;
 };

@@ -158,6 +158,7 @@
     <ClCompile Include="RoadGenerator.cpp" />
     <ClCompile Include="StringOperator.cpp" />
     <ClCompile Include="Traj.cpp" />
+    <ClCompile Include="TrajDrawer.cpp" />
     <ClCompile Include="TrajReader.cpp" />
   </ItemGroup>
   <ItemGroup>

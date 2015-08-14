@@ -61,10 +61,36 @@ void ExpGenerator::genExpData_2MM(string rawTrajFilePath)
 	///[注意]第一次匹配：使用mmRoadId2来记录匹配信息
 	///第二从匹配，使用mmRoadId字段来记录匹配信息（勿搞反！）
 	//////////////////////////////////////////////////////////////////////////
-	double mmThres = 25.0;
+	double mmThres = 50.0;
 	readRawTrajs(rawTrajFilePath);
 	doSplit();
 	deleteList(rawTrajs); //释放rawTrajs内存
+
+	
+	/**********************************************************/
+	/*test code starts from here*/
+	TrajDrawer::drawTrajs(trajsInArea, md, Gdiplus::Color::Red);
+	double minLat = 999;
+	double maxLat = 0;
+	double minLon = 999;
+	double maxLon = 0;
+	for each (Traj* traj in trajsInArea)
+	{
+		for each (GeoPoint* pt in *traj)
+		{
+			if (pt->lat < minLat) minLat = pt->lat;
+			if (pt->lat > maxLat) maxLat = pt->lat;
+			if (pt->lon < minLon) minLon = pt->lon;
+			if (pt->lon > maxLon) maxLon = pt->lon;
+		}
+	}
+	Area(minLat, maxLat, minLon, maxLon).print();
+
+	//return;
+	/*test code ends*/
+	/**********************************************************/
+	
+	
 	//第一次使用原地图匹配
 	cout << ">> 进行第一次地图匹配" << endl;
 	doMM(&originalRoadNetwork, trajsInArea, mmThres);
@@ -165,7 +191,6 @@ void ExpGenerator::extractUnmatchedTrajs()
 		{
 			if (pt->mmRoadId == -1) //留下那些第二次匹配失败的点[是反的，详见genExpData_2MM内注释说明]
 			{
-			//system("pause");
 				ofs << pt->time << " " << pt->lat << " " << pt->lon << " " << -1 << endl;
 				lastOutputIsNegative1 = false;
 			}
@@ -196,7 +221,7 @@ void ExpGenerator::setArea(Area* area)
 void ExpGenerator::readRawTrajs(string rawTrajFilePath)
 {
 	TrajReader tReader(rawTrajFilePath);
-	tReader.readTrajs(rawTrajs);
+	tReader.readTrajs(rawTrajs);// , 100);
 	cout << "read " << rawTrajs.size() << " trajs" << endl;
 }
 
@@ -306,8 +331,8 @@ void ExpGenerator::doMM(Map* roadNetwork, list<Traj*>& trajs, double thresM /* =
 		list<Edge*> result;
 		mm.MapMatching(*(*trajIter), result, thresM); //MapMatching
 
-		if (count % 1000 == 0)
-			cout << ">> MM" << count << " finished" << endl;
+		//if (count % 1000 == 0)
+		//	cout << ">> MM" << count << " finished" << endl;
 		Traj* traj = (*trajIter);
 		if (traj == NULL)
 			continue;
@@ -337,6 +362,14 @@ void ExpGenerator::outputNewTrajs(list<Traj*>& trajs)
 	///文件写入方式为追加写入
 	//////////////////////////////////////////////////////////////////////////
 	newMMTrajsFile.open(outputFolder + newMMTrajsFileName, ios::app);
+	if (!newMMTrajsFile)
+	{
+		cout << "output to " << outputFolder + newMMTrajsFileName << " error" << endl;
+	}
+	if (trajs.size() == 0)
+	{
+		cout << "traj size = 0" << endl;
+	}
 	newMMTrajsFile << fixed << showpoint << setprecision(8);
 	bool lastOutputIsNegative1 = false;
 	for each(Traj* traj in trajs)

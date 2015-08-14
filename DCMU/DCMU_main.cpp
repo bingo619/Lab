@@ -26,9 +26,14 @@ using namespace Gdiplus;
 //Area area(1.26883, 1.27497, 103.79333, 103.80016); //port_不用这个了
 //Area area(1.26883, 1.27636, 103.79013, 103.80016); //port
 //Area area(1.294788, 1.327723, 103.784667, 103.825200); //small
-Area area(1.294788, 1.393593, 103.784667, 103.906266); //area1
+//Area area(1.294788, 1.393593, 103.784667, 103.906266); //area1
 //Area area(1.343593, 1.442398, 103.784667, 103.906266); //area2
 //Area area(1.294788, 1.393593, 103.704667, 103.826266); //area3
+//Area area(39.8354, 39.9867, 116.2582, 116.4995); //beijing
+//Area area(39.9011, 39.9066, 116.2582, 116.2687); //beijing hospital area
+//Area area(1.29411, 1.30193, 103.81678, 103.82483); //area for denoise test
+//Area area(1.33147, 1.33403, 103.79764, 103.80181); //area for denoise test2
+Area area(1.32026, 1.32816, 103.81937, 103.82826); //area for denoise test3
 
 Map roadNetwork;
 Map originalRoadNetwork; //未用
@@ -38,9 +43,9 @@ PointGridIndex allPtIndex;
 //double gridSizeM = 10.0;
 //int gridWidth = (area.maxLon - area.minLon) * GeoPoint::geoScale / gridSizeM;
 int gridWidth = 900;
-string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area1\\";
+string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\area1\\new\\1MM\\";
 //string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\port area\\";
-
+//string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\big area\\geo\\bj_area1\\";
 list<GeoPoint*> allPts;
 list<Traj*> allTrajs;
 int roadId = 10126;//38139;//10339;//37765;
@@ -268,6 +273,51 @@ void genExpData_1MM()
 	exit(0);
 }
 
+void genExpData_new()
+{
+	//////////////////////////////////////////////////////////////////////////
+	///生成两次匹配后的轨迹数据
+	//////////////////////////////////////////////////////////////////////////
+	double gridSizeM = 100.0;
+	int gridWidth = (double)(area.maxLon - area.minLon) / (double)(gridSizeM / GeoPoint::geoScale);
+	roadNetwork.setArea(&area);
+	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\old\\", gridWidth);
+	originalRoadNetwork.setArea(&area);
+	originalRoadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\old\\", gridWidth);
+	//roadNetwork.deleteEdges(workspaceFolder + "deletedEdges.txt");
+
+	ExpGenerator eg;
+	string yearmonth = "201101";
+	for (int i = 1; i <= 15; i++)
+	{
+		string inFileName;
+		if (i < 9)
+		{
+			inFileName = "logs_" + yearmonth + "0" + StringOperator::intToString(i) + "_" + yearmonth + "0" + StringOperator::intToString(i + 1) + ".txt";
+		}
+		else if (i == 9)
+		{
+			inFileName = "logs_" + yearmonth + "09" + "_" + yearmonth + "10.txt";
+		}
+		else
+		{
+			inFileName = "logs_" + yearmonth + StringOperator::intToString(i) + "_" + yearmonth + StringOperator::intToString(i + 1) + ".txt";
+		}
+		eg.inputFileNames.push_back(inFileName);
+	}
+	eg.setArea(&area);
+
+	md.setArea(&area);
+	md.setResolution(5000);
+	md.newBitmap();
+	md.lockBits();
+	eg.genExpData_1MM();
+	md.unlockBits();
+	md.saveBitmap("area2_trajs.png");
+	system("pause");
+	exit(0);	
+}
+
 void subSample()
 {
 	//////////////////////////////////////////////////////////////////////////
@@ -319,11 +369,80 @@ void dataAnalyzer(string dataPath)
 	}
 	cout << "平均采样率为： " << (double)totalTime / (double)intervalCount << "s" << endl;
 }
+
+void filterPts(string filePath)
+{
+	string outpath = "area1_denoise_test3.txt";
+	TrajReader tReader(filePath);
+	list<GeoPoint*> pts;
+	tReader.readGeoPoints(pts, &area);//, 1000);
+	tReader.outputPts(pts, outpath);
+}
+
+void drawTrajFile(string filePath)
+{
+	TrajReader tr(filePath);
+	list<Traj*> trajs;
+	tr.readTrajs(trajs, 10000000);
+	double minLat = 999;
+	double maxLat = 0;
+	double minLon = 999;
+	double maxLon = 0;
+	for each (Traj* traj in trajs)
+	{
+		for each (GeoPoint* pt in *traj)
+		{
+			if (pt->lat < minLat) minLat = pt->lat;
+			if (pt->lat > maxLat) maxLat = pt->lat;
+			if (pt->lon < minLon) minLon = pt->lon;
+			if (pt->lon > maxLon) maxLon = pt->lon;
+		}
+	}
+	Area newArea(minLat, maxLat, minLon, maxLon);
+
+	//draw
+	md.setArea(&area);
+	md.setResolution(15000);
+	md.newBitmap();
+	md.lockBits();
+
+	roadNetwork.setArea(&newArea);
+	//roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\old\\", gridWidth);
+	roadNetwork.open("D:\\trajectory\\beijing_data\\beijing_map\\new\\", gridWidth);
+	roadNetwork.drawMap(Color::Black, md);
+	//roadNetwork.drawDeletedEdges(Gdiplus::Color::Red, md);
+	TrajDrawer::drawMMTrajs(trajs, md, Color::Red, false, false, false, true);
+	md.unlockBits();
+	md.saveBitmap("area1_1MM.png");
+	system("pause");
+	exit(0);
+}
 ////////////////////////////////////////////////////////////////////////
+
+void dashTest()
+{
+	MapDrawer md;
+	md.setResolution(1300, 1300);
+	md.newBitmap();
+	md.lockBits();
+	md.drawBoldLine(Color::Red, 0, 0, 1000, 1000, Mode::DASHLINE);
+	md.drawBoldLine(Color::Green, 0, 10, 1000, 1100);
+	md.drawLine(Color::Blue, 0, 20, 1000, 1200,Mode::DASHLINE);
+	md.unlockBits();
+	md.saveBitmap("dash.png");
+}
 
 void main()
 {
-	//genExpData_1MM();
+	dashTest();
+	exit(0);
+	
+	filterPts(workspaceFolder + "newMMTrajs.txt");
+	return;
+	//drawTrajFile("G:\\workspace\\1\\newMMTrajs.txt");
+	//drawTrajFile(workspaceFolder+"newMMTrajs.txt");
+	//drawTrajFile(workspaceFolder + "hospital.txt");
+	//genExpData_new();
 	//genMMData();
 	//subSample();
 	//exit(0);
