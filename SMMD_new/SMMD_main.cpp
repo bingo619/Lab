@@ -16,7 +16,7 @@
 #include "Evaluation.h"
 using namespace std;
 using namespace Gdiplus;
-
+//p
 string workspaceFolder = "C:\\Downloads\\TrajData\\SMMD\\";
 //string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\SMMD\\";
 string mapFileFolder = "C:\\Downloads\\TrajData\\map\\old\\";
