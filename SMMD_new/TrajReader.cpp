@@ -76,7 +76,7 @@ void TrajReader::readTrajs(vector<Traj*>& dest, int count /* = INF */)
 	}
 	cout << ">> reading trajs finished" << endl;
 	cout << dest.size() << "trajs in all" << endl;
-	trajIfs.close();
+	//trajIfs.close();
 }
 
 void TrajReader::readTrajs(list<Traj*>& dest, int count /* = INF */)
@@ -137,7 +137,7 @@ void TrajReader::readTrajs(list<Traj*>& dest, int count /* = INF */)
 	}
 	cout << ">> reading trajs finished" << endl;
 	cout << dest.size() << " trajs in all" << endl;
-	trajIfs.close();
+	//trajIfs.close();
 }
 
 void TrajReader::readGeoPoints(list<GeoPoint*>& dest, Area* area/* = NULL */, int count /* = INF */)
@@ -193,6 +193,11 @@ void TrajReader::readGeoPoints(list<GeoPoint*>& dest, Area* area/* = NULL */, in
 	}
 	cout << ">> reading GeoPoints finished" << endl;
 	cout << dest.size() << " GeoPoints in all" << endl;
+	//trajIfs.close();
+}
+
+void TrajReader::close()
+{
 	trajIfs.close();
 }
 

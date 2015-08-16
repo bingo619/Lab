@@ -160,6 +160,7 @@ void filterTrainData()
 	TrajReader tReader(inpath);
 	list<GeoPoint*> pts;
 	tReader.readGeoPoints(pts, &area);//, 1000);
+	tReader.close();
 	tReader.outputPts(pts, outpath);
 }
 
@@ -195,6 +196,7 @@ void drawTrainData(string filePath)
 	TrajReader tReader(filePath);
 	list<GeoPoint*> pts;
 	tReader.readGeoPoints(pts, &area, 2000000);
+	tReader.close();
 
 	for each (GeoPoint* pt in pts)
 	{
@@ -306,6 +308,7 @@ void evalSMMD(vector<SampleType>& tests)
 		list <GeoPoint*> testSMMDataSet;
 		TrajReader tReader(trainDataPath);
 		tReader.readGeoPoints(testSMMDataSet, &area, 100000);
+		tReader.close();
 		tests.clear();
 		for each (GeoPoint* pt in testSMMDataSet)
 		{
@@ -491,6 +494,7 @@ void evalSMMD_2(vector<SampleType>& tests)
 		list <GeoPoint*> testSMMDataSet;
 		TrajReader tReader(trainDataPath);
 		tReader.readGeoPoints(testSMMDataSet, &area, 400000);
+		tReader.close();
 		tests.clear();
 		for each (GeoPoint* pt in testSMMDataSet)
 		{
@@ -516,13 +520,14 @@ void evalSMMD_2(vector<SampleType>& tests)
 	int probCount = 0;
 	int twoNNNoCount = 0;
 	int invalidCount = 0;
+	int tooFarCount = 0;
 
 	for (int i = 0; i < tests.size(); i++)
 	{
 		if (i % 1000 == 0)
 			cout << i << endl;
 		SampleType testData = tests[i];
-
+		
 		/**********************************************************/
 		/*test code starts from here*/
 
@@ -542,21 +547,14 @@ void evalSMMD_2(vector<SampleType>& tests)
 
 		if (/*roadNetwork.edges[testData.rId] == NULL || */roadNetwork.edges[testData.rId]->r_hat.size() == 0)// || roadNetwork.distM(testData.x->lat, testData.x->lon, roadNetwork.edges[testData.rId]) >= 50.0)
 		{
-			//allCount--;
 			invalidCount++;
-			//md.drawBigPoint(Color::Black, testData.x->lat, testData.x->lon);
 			continue;
 		}
 
 		if (roadNetwork.distM(testData.x->lat, testData.x->lon, roadNetwork.edges[testData.rId]) >= 50.0)
 		{
-			//allCount--;
 			md.drawBigPoint(Color::Green, testData.x->lat, testData.x->lon);
-			//TrajDrawer::drawOneTraj(roadNetwork.edges[37958]->figure, md, Color::Red, true);
-			//printf("%d: %d\n", i, testData.rId);
-			//testData.x->print();			
-			//system("pause");
-			//return;
+			tooFarCount++;
 			continue;
 		}
 
@@ -603,7 +601,7 @@ void evalSMMD_2(vector<SampleType>& tests)
 		//偏的不厉害的排除
 		int slotId0 = nearEdges[0]->getSlotId(testData.x);
 		int slotId1 = nearEdges[1]->getSlotId(testData.x);
-		if (abs(roadNetwork.edges[testData.rId]->thetas[slotId0].mu - roadNetwork.edges[testData.rId]->thetas[slotId1].mu) < 0)
+		if (abs(roadNetwork.edges[testData.rId]->thetas[slotId0].mu - roadNetwork.edges[testData.rId]->thetas[slotId1].mu) < 0) //负数不过滤
 		{
 			biasCount++;
 			continue;
@@ -672,7 +670,203 @@ void evalSMMD_2(vector<SampleType>& tests)
 	printf("wrong: %lf\n", (double)wrongCount_both / (double)wrongCount_our);
 	printf("SMMD_acc = %lf\n", (double)correctCount / (double)allCount);
 	printf("SMMDcorrectCount = %d, allCount = %d\n", correctCount, allCount);
-	printf("allCount = %d, cross = %d, bias = %d, 2NN = %d, prob = %d, invalid = %d\n", allCount, crossCount, biasCount, twoNNNoCount, probCount, invalidCount);
+	printf("allCount = %d, cross = %d, bias = %d, 2NN = %d, prob = %d, invalid = %d, tooFar = %d\n", allCount, crossCount, biasCount, twoNNNoCount, probCount, invalidCount, tooFarCount);
+}
+
+void evalSMMD_new(vector<SampleType>& tests)
+{
+	double (SMMD::* pFunc)(Edge*, GeoPoint*, GeoPoint*); //一个类成员函数指针变量pFunc的定义
+
+	bool smmdSwitch = false;
+	if (smmdSwitch)
+	{
+		pFunc = &SMMD::probSMMD;
+	}
+	else
+	{
+		pFunc = &SMMD::probSMM;
+		//构造SMM testData
+		list <GeoPoint*> dummyDataSet, testSMMDataSet;
+		TrajReader tReader(trainDataPath);
+		tReader.readGeoPoints(dummyDataSet, &area, 300000);
+		tReader.readGeoPoints(testSMMDataSet, &area, 100000);
+		tReader.close();
+		tests.clear();
+		for each (GeoPoint* pt in testSMMDataSet)
+		{
+			tests.push_back(SampleType(pt, NULL, pt->mmRoadId));
+		}
+	}
+	cout << "test sample size = " << tests.size() << endl;
+
+
+	SMMD smmd(roadNetwork);
+	int baselineCorrectCount = 0;
+	int correctCount = 0;
+	int allCount = 0;
+	int wrongCount_our = 0;
+	int wrongCount_both = 0;
+	int wrongCount_naive = 0;
+
+	int ourWnaiveR = 0;
+	int ourRnaiveW = 0;
+
+	int crossCount = 0;
+	int biasCount = 0;
+	int probCount = 0;
+	int twoNNNoCount = 0;
+	int invalidCount = 0;
+	int tooFarCount = 0;
+
+	for (int i = 0; i < tests.size(); i++)
+	{
+		if (i % 1000 == 0)
+			cout << i << endl;
+		SampleType testData = tests[i];
+
+		/**********************************************************/
+		/*test code starts from here*/
+
+		if (testData.rId == 48067)
+		{
+			//allCount--;
+			continue;
+			md.drawBigPoint(Color::Black, testData.x->lat, testData.x->lon);
+		}
+		/*test code ends*/
+		/**********************************************************/
+		if (roadNetwork.edges[testData.rId] == NULL)
+		{
+
+			continue;
+		}
+
+		if (/*roadNetwork.edges[testData.rId] == NULL || */roadNetwork.edges[testData.rId]->r_hat.size() == 0)// || roadNetwork.distM(testData.x->lat, testData.x->lon, roadNetwork.edges[testData.rId]) >= 50.0)
+		{
+			invalidCount++;
+			continue;
+		}
+
+		if (roadNetwork.distM(testData.x->lat, testData.x->lon, roadNetwork.edges[testData.rId]) >= 50.0)
+		{
+			md.drawBigPoint(Color::Green, testData.x->lat, testData.x->lon);
+			tooFarCount++;
+			continue;
+		}
+
+		/*int slotId = roadNetwork.edges[testData.rId]->getSlotId(testData.x);
+		if (abs(roadNetwork.edges[testData.rId]->thetas[slotId].mu) < 5)
+		{
+		allCount--;
+		continue;
+		}*/
+		/*
+		if (abs(roadNetwork.edges[testData.rId]->u) > 5)
+		{
+		allCount--;
+		continue;
+		}*/
+
+		//滤去路口测试数据点
+		vector<GeoPoint*> oneNN;
+		roadNetwork.ptIndex.kNN_approx(testData.x, 1, 100.0, oneNN);
+		if (GeoPoint::distM(oneNN[0], testData.x) < -50.0) //负数则不滤点
+		{
+			crossCount++;
+			continue;
+		}
+
+		vector<Edge*> nearEdges;
+		roadNetwork.getNearEdges(testData.x->lat, testData.x->lon, 2, nearEdges);
+		if (nearEdges[1] == NULL || nearEdges[0] == NULL)
+		{
+			system("pause");
+		}
+		if (nearEdges[0]->r_hat.size() == 0 || nearEdges[1]->r_hat.size() == 0)
+		{
+			continue;
+		}
+
+		//最近两条之中都没的话排除 (75%->72%)
+		if (nearEdges[0]->id != testData.rId && nearEdges[1]->id != testData.rId)
+		{
+			twoNNNoCount++;
+			//continue;
+		}
+
+		//偏的不厉害的排除
+		int slotId0 = nearEdges[0]->getSlotId(testData.x);
+		int slotId1 = nearEdges[1]->getSlotId(testData.x);
+		if (abs(roadNetwork.edges[testData.rId]->thetas[slotId0].mu - roadNetwork.edges[testData.rId]->thetas[slotId1].mu) < 0) //负数不过滤
+		{
+			biasCount++;
+			continue;
+		}
+
+		//如果最近的就一条
+		if (abs(roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[1]) - roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[0])) > eps)
+		{
+			cout << "最近的就一条" << endl;
+			system("pause");
+		}
+
+		double ratio;
+		int ans;
+
+		if (smmdSwitch)
+		{
+			ratio = smmd.probSMMD(nearEdges[0], testData.x, testData.d) / smmd.probSMMD(nearEdges[1], testData.x, testData.d);
+			ans = smmd.probSMMD(nearEdges[0], testData.x, testData.d) > smmd.probSMMD(nearEdges[1], testData.x, testData.d) ? nearEdges[0]->id : nearEdges[1]->id;
+		}
+		else
+		{
+			ratio = smmd.probSMM(nearEdges[0], testData.x, testData.d) / smmd.probSMM(nearEdges[1], testData.x, testData.d);
+			//ans = smmd.probSMM(nearEdges[0], testData.x, testData.d) > smmd.probSMM(nearEdges[1], testData.x, testData.d) ? nearEdges[0]->id : nearEdges[1]->id;
+			ans = smmd.doSMMD(testData.x, testData.x, pFunc);
+		}
+		if (ratio < 1)
+			ratio = 1 / ratio;
+
+		//只留下高概率的
+		if (ratio >= 1)
+		{
+			//base line
+			int ans_b;
+			if (SMMD::distM_signed(nearEdges[0], testData.x) > 0)
+				ans_b = nearEdges[0]->id;
+			else
+				ans_b = nearEdges[1]->id;
+
+			if (testData.rId == ans && testData.rId == ans_b)
+				correctCount++;
+			if (testData.rId != ans && testData.rId != ans_b)
+				wrongCount_both++;
+			if (testData.rId != ans)
+				wrongCount_our++;
+			if (testData.rId != ans_b)
+				wrongCount_naive++;
+			if (ans == ans_b)
+				allCount++;
+			if (testData.rId != ans && testData.rId == ans_b)
+				ourWnaiveR++;
+			if (testData.rId == ans && testData.rId != ans_b)
+				ourRnaiveW++;
+		}
+		else
+		{
+			probCount++;
+			continue;
+		}
+		md.drawBigPoint(Color::Red, testData.x->lat, testData.x->lon);
+
+		//if (testData.rId == smmd.doSMMD(testData.x, testData.d, pFunc))
+		//	correctCount++;
+	}
+	printf("wrong ourWnaiveR = %lf\n", (double)ourWnaiveR / (double)wrongCount_our);
+	printf("wrong: %lf\n", (double)wrongCount_both / (double)wrongCount_our);
+	printf("SMMD_acc = %lf\n", (double)correctCount / (double)allCount);
+	printf("SMMDcorrectCount = %d, allCount = %d\n", correctCount, allCount);
+	printf("allCount = %d, cross = %d, bias = %d, 2NN = %d, prob = %d, invalid = %d, tooFar = %d\n", allCount, crossCount, biasCount, twoNNNoCount, probCount, invalidCount, tooFarCount);
 }
 
 void evalSMM()
@@ -688,6 +882,7 @@ void evalSMM()
 	TrajReader tReader(trainDataPath);
 	//TrajReader tReader(testDataPath);
 	tReader.readGeoPoints(testSMMDataSet, &area, 200000);
+	tReader.close();
 	int allCount = testSMMDataSet.size();
 
 	for each (GeoPoint* testData in testSMMDataSet)
@@ -840,7 +1035,8 @@ void baseline2_SMM()
 	list <GeoPoint*> testSMMDataSet;
 	TrajReader tReader(trainDataPath);
 	tReader.readGeoPoints(testSMMDataSet, &area, 200000);
-	
+	tReader.close();
+
 	//roadNetwork.loadPolylines(fakeCenterlineFilePath);
 	for (int i = 0; i < roadNetwork.edges.size(); i++)
 	{
@@ -1028,6 +1224,7 @@ void outputJSON(string trajFilePath)
 	TrajReader tr(trajFilePath);
 	list<GeoPoint*> ptsList;
 	tr.readGeoPoints(ptsList, &area, 300000);
+	tr.close();
 	vector<GeoPoint*> outputPts;
 	for each (GeoPoint* pt in ptsList)
 	{
@@ -1059,6 +1256,7 @@ void getBeijingArea()
 	list<GeoPoint*> pts;
 	Area beijinArea;
 	tr.readGeoPoints(pts);
+	tr.close();
 	beijinArea.getArea(pts);
 	beijinArea.print();
 	roadNetwork.setArea(&beijinArea);
@@ -1177,7 +1375,7 @@ double evaluate(vector<SampleType>& testDataSet, vector<int>& prediction)
 	}
 	return (double)correct / (double)all;
 }
-
+///
 void main()
 {
 	
@@ -1218,8 +1416,8 @@ void main()
 	
 	/**********************************************************/
 	/*test code starts from here*/
-	trainSMM(25.0, 100000);
-	evalSMMD_2(testDataSet);
+	trainSMM(25.0, 300000);
+	evalSMMD_new(testDataSet);
 	/*test code ends*/
 	/**********************************************************/
 	
