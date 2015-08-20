@@ -19,7 +19,8 @@ public:
 	Trainer(Map* roadNetwork_, Area* area_);
 	void loadPrior(string priorDataPath); //¶Áp(r)
 	void loadTrainData(string trainDataPath, int count = INF);
-	
+	void loadTrainData(list<GeoPoint*> trainDataSet);
+
 	void trainSimple(double intervalM = 50.0);
 	void trainSMMD();
 	void trainSMMDEx(double intervalM = 50.0);

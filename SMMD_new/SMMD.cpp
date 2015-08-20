@@ -50,12 +50,17 @@ int SMMD::doSMMD(GeoPoint* x, GeoPoint* d, double(SMMD::*p)(Edge*, GeoPoint*, Ge
 {
 	double thresholdM = 50.0;
 	vector<Edge*> candidateRoads;
-	roadNetwork->getNearEdges(x->lat, x->lon, thresholdM, candidateRoads);
-	//roadNetwork->getNearEdges(x->lat, x->lon, 2, candidateRoads);
+	//roadNetwork->getNearEdges(x->lat, x->lon, thresholdM, candidateRoads);
+	roadNetwork->getNearEdges(x->lat, x->lon, 5, candidateRoads);
 	
 	double maxProb = -1;
 	int returnId = -1;
 
+	if (candidateRoads.size() <= 0)
+	{
+		cout << "candidate size = " << candidateRoads.size() << endl;
+		system("pause");
+	}
 	for each(Edge* r in candidateRoads)
 	{
 		if (r->r_hat.size() == 0)

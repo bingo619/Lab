@@ -35,6 +35,23 @@ void Trainer::loadTrainData(string trainDataPath, int count /* = INF */)
 	//////////////////////////////////////////////////////////////////////////
 	TrajReader tReader(trainDataPath);
 	tReader.readGeoPoints(trainDataSet, area, count);
+	
+	//分发数据
+	for each (GeoPoint* pt in trainDataSet)
+	{
+		if (pt == NULL || pt->mmRoadId == -1)
+			continue;
+		if (roadNetwork->edges[pt->mmRoadId] != NULL)
+			roadNetwork->edges[pt->mmRoadId]->trainData.push_back(pt);
+	}
+}
+
+void Trainer::loadTrainData(list<GeoPoint*> trainDataSet)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///1）将训练数据分发到相应的edge上
+	///注：读取的数据都是在设定area中的
+	//////////////////////////////////////////////////////////////////////////
 	//分发数据
 	for each (GeoPoint* pt in trainDataSet)
 	{

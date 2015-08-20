@@ -166,14 +166,14 @@ void PointGridIndex::kNN_exact(GeoPoint* pt, int k, vector<GeoPoint*>& dest)
 	if (row1 < 0) row1 = 0;
 	if (row1 >= gridHeight)
 	{
-		cout << "越界" << endl;
+		cout << "越界@PointGridIndex::kNN_exact" << endl;
 		system("pause");
 	}
 	if (row2 >= gridHeight) row2 = gridHeight - 1;
 	if (col1 < 0) col1 = 0;
 	if (col1 >= gridWidth)
 	{
-		cout << "越界" << endl;
+		cout << "越界@PointGridIndex::kNN_exact" << endl;
 		system("pause");
 	}
 	if (col2 >= gridWidth) col2 = gridWidth - 1;

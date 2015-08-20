@@ -16,15 +16,16 @@
 #include "Evaluation.h"
 using namespace std;
 using namespace Gdiplus;
-//p
-string workspaceFolder = "C:\\Downloads\\TrajData\\SMMD\\";
-//string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\SMMD\\";
-string mapFileFolder = "C:\\Downloads\\TrajData\\map\\old\\";
+
+//string workspaceFolder = "C:\\Downloads\\TrajData\\SMMD\\";
+string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\SMMD\\";
+//string mapFileFolder = "C:\\Downloads\\TrajData\\map\\old\\";
+string mapFileFolder = "D:\\trajectory\\singapore_data\\singapore_map\\old\\";
 string testDataFolder = workspaceFolder + "testData\\";
 string trainDataFolder = workspaceFolder + "trainData\\";
 
 
-int datasetID = 1;
+int datasetID = 2;
 string trainDataPath = trainDataFolder + "area" + StringOperator::intToString(datasetID) +"_50m.txt"; // +"area1_50m.txt";
 string testDataPath = testDataFolder + "testData3_area" + StringOperator::intToString(datasetID) +".txt";// "testData_area1.txt";
 //string testDataPath = testDataFolder + "testData3.txt";
@@ -32,8 +33,8 @@ string polylineFilePath = trainDataFolder + "polyline1_new.txt";
 string fakeCenterlineFilePath = trainDataFolder + "fakeCenterline" + StringOperator::intToString(datasetID) +".txt";
 string priorFilePath = trainDataFolder + "SMMD_prior3.txt";
 
-Area area(1.342433, 1.353236, 103.864837, 103.875921); //area1
-//Area area(1.3290, 1.3444, 103.8377, 103.8598); //area2
+//Area area(1.342433, 1.353236, 103.864837, 103.875921); //area1
+Area area(1.3290, 1.3444, 103.8377, 103.8598); //area2
 //Area area(1.3280, 1.3947, 103.8245, 103.9114); //area3
 //Area area(1.22, 1.5, 103.62, 104); //singapore half
 //Area area(39.398073, 40.366082, 115.770605, 117.079043); //beijing full
@@ -45,6 +46,8 @@ double minLon = 103.620;
 double maxLon = 104.0;*/
 
 
+double noiseScaleM = 0;
+
 
 Map roadNetwork;
 Trainer trainer(&roadNetwork, &area);
@@ -52,6 +55,8 @@ MapDrawer md;
 
 
 vector<SampleType> testDataSet;
+list<GeoPoint*> testSMMDataSet;
+list<GeoPoint*> trainDataSet;
 
 void loadTestData(double threshM_for_intersection, int count  = INF, bool draw = false );
 
@@ -206,6 +211,49 @@ void drawTrainData(string filePath)
 	trainer.drawCenterline(fakeCenterlineFilePath, md);
 }
 
+//////////////////////////////////////////////////////////////////////////
+///噪声相关
+//////////////////////////////////////////////////////////////////////////
+
+void addNoise(double noiseScaleM, vector<SampleType>& tests)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///对测试集加上噪声
+	//////////////////////////////////////////////////////////////////////////
+
+	for (int i = 0; i < tests.size(); i++)
+	{
+		double deltaX = (((double)rand() / (double)RAND_MAX) * 2 - 1) * noiseScaleM / GeoPoint::geoScale;
+		double deltaY = (((double)rand() / (double)RAND_MAX) * 2 - 1) * noiseScaleM / GeoPoint::geoScale;
+		if (!area.inArea(tests[i].x->lat + deltaY, tests[i].x->lon + deltaX))
+		{
+			continue;
+		}
+
+		tests[i].x->lat += deltaY;
+		tests[i].x->lon += deltaX;
+	}
+}
+
+void addNoise(double noiseScaleM, list<GeoPoint*>& trainDataSet)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///对训练集加上噪声
+	//////////////////////////////////////////////////////////////////////////
+	for  each (GeoPoint* pt in trainDataSet)
+	{
+		double deltaX = (((double)rand() / (double)RAND_MAX) * 2 - 1) * noiseScaleM / GeoPoint::geoScale;
+		double deltaY = (((double)rand() / (double)RAND_MAX) * 2 - 1) * noiseScaleM / GeoPoint::geoScale;
+		if (!area.inArea(pt->lat + deltaY, pt->lon + deltaX))
+		{
+			continue;
+		}
+
+		pt->lat += deltaY;
+		pt->lon += deltaX;
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////
 
 vector<int> correctCounts;
@@ -243,7 +291,8 @@ void loadTestData(double threshM_for_intersection, int count /* = INF */, bool d
 		roadNetwork.ptIndex.kNN_exact(x, 1, oneNN);
 		if (GeoPoint::distM(oneNN[0], x) < threshM_for_intersection)
 			continue;
-
+		if (roadNetwork.edges[rId]->r_hat.size() == 0)
+			continue;
 		testDataSet.push_back(td);
 		currentCount++;
 	}
@@ -261,10 +310,16 @@ void loadTestData(double threshM_for_intersection, int count /* = INF */, bool d
 
 void trainSMM(double intervalM, int count = INF)
 {
-	trainer.loadTrainData(trainDataPath, count);
+	TrajReader tReader(trainDataPath);
+	tReader.readGeoPoints(trainDataSet, &area, count);
+	tReader.close();
+	//add noise
+	addNoise(noiseScaleM, trainDataSet);
+	trainer.loadTrainData(trainDataSet);
+	//trainer.loadTrainData(trainDataPath, count);
 	trainer.loadPrior(priorFilePath);
 	//roadNetwork.loadPolylines(polylineFilePath);
-	roadNetwork.loadPolylines(fakeCenterlineFilePath);
+	//roadNetwork.loadPolylines(fakeCenterlineFilePath);
 	trainer.trainSimple(intervalM);
 	cout << "参数训练完成" << endl;
 }
@@ -673,6 +728,20 @@ void evalSMMD_2(vector<SampleType>& tests)
 	printf("allCount = %d, cross = %d, bias = %d, 2NN = %d, prob = %d, invalid = %d, tooFar = %d\n", allCount, crossCount, biasCount, twoNNNoCount, probCount, invalidCount, tooFarCount);
 }
 
+void loadSMMTestData(int trainCount, int testCount, vector<SampleType>& tests, list<GeoPoint*>& testSMMDataSet)
+{
+	list <GeoPoint*> dummyDataSet;
+	TrajReader tReader(trainDataPath);
+	tReader.readGeoPoints(dummyDataSet, &area, trainCount);
+	tReader.readGeoPoints(testSMMDataSet, &area, testCount);
+	tReader.close();
+	tests.clear();
+	for each (GeoPoint* pt in testSMMDataSet)
+	{
+		tests.push_back(SampleType(pt, NULL, pt->mmRoadId));
+	}
+}
+
 void evalSMMD_new(vector<SampleType>& tests)
 {
 	double (SMMD::* pFunc)(Edge*, GeoPoint*, GeoPoint*); //一个类成员函数指针变量pFunc的定义
@@ -686,19 +755,16 @@ void evalSMMD_new(vector<SampleType>& tests)
 	{
 		pFunc = &SMMD::probSMM;
 		//构造SMM testData
-		list <GeoPoint*> dummyDataSet, testSMMDataSet;
-		TrajReader tReader(trainDataPath);
-		tReader.readGeoPoints(dummyDataSet, &area, 300000);
-		tReader.readGeoPoints(testSMMDataSet, &area, 100000);
-		tReader.close();
-		tests.clear();
-		for each (GeoPoint* pt in testSMMDataSet)
-		{
-			tests.push_back(SampleType(pt, NULL, pt->mmRoadId));
-		}
+		
 	}
 	cout << "test sample size = " << tests.size() << endl;
-
+	addNoise(noiseScaleM, tests);
+	//draw testData
+	for each (SampleType testData in testDataSet)
+	{
+		md.drawPoint(Color::Red, testData.x->lat, testData.x->lon);
+	}
+	
 
 	SMMD smmd(roadNetwork);
 	int baselineCorrectCount = 0;
@@ -720,24 +786,12 @@ void evalSMMD_new(vector<SampleType>& tests)
 
 	for (int i = 0; i < tests.size(); i++)
 	{
-		if (i % 1000 == 0)
-			cout << i << endl;
+		if (i % 10000 == 0)
+			cout << "testing " << i << endl;
 		SampleType testData = tests[i];
 
-		/**********************************************************/
-		/*test code starts from here*/
-
-		if (testData.rId == 48067)
-		{
-			//allCount--;
-			continue;
-			md.drawBigPoint(Color::Black, testData.x->lat, testData.x->lon);
-		}
-		/*test code ends*/
-		/**********************************************************/
 		if (roadNetwork.edges[testData.rId] == NULL)
 		{
-
 			continue;
 		}
 
@@ -747,12 +801,12 @@ void evalSMMD_new(vector<SampleType>& tests)
 			continue;
 		}
 
-		if (roadNetwork.distM(testData.x->lat, testData.x->lon, roadNetwork.edges[testData.rId]) >= 50.0)
+		/*if (roadNetwork.distM(testData.x->lat, testData.x->lon, roadNetwork.edges[testData.rId]) >= 50.0) //匹配距离太远
 		{
 			md.drawBigPoint(Color::Green, testData.x->lat, testData.x->lon);
 			tooFarCount++;
 			continue;
-		}
+		}*/
 
 		/*int slotId = roadNetwork.edges[testData.rId]->getSlotId(testData.x);
 		if (abs(roadNetwork.edges[testData.rId]->thetas[slotId].mu) < 5)
@@ -769,7 +823,7 @@ void evalSMMD_new(vector<SampleType>& tests)
 
 		//滤去路口测试数据点
 		vector<GeoPoint*> oneNN;
-		roadNetwork.ptIndex.kNN_approx(testData.x, 1, 100.0, oneNN);
+		roadNetwork.ptIndex.kNN_exact(testData.x, 1,oneNN);
 		if (GeoPoint::distM(oneNN[0], testData.x) < -50.0) //负数则不滤点
 		{
 			crossCount++;
@@ -863,10 +917,10 @@ void evalSMMD_new(vector<SampleType>& tests)
 		//	correctCount++;
 	}
 	printf("wrong ourWnaiveR = %lf\n", (double)ourWnaiveR / (double)wrongCount_our);
-	printf("wrong: %lf\n", (double)wrongCount_both / (double)wrongCount_our);
-	printf("SMMD_acc = %lf\n", (double)correctCount / (double)allCount);
+	printf("wrong both: %lf\n", (double)wrongCount_both / (double)wrongCount_our);
 	printf("SMMDcorrectCount = %d, allCount = %d\n", correctCount, allCount);
 	printf("allCount = %d, cross = %d, bias = %d, 2NN = %d, prob = %d, invalid = %d, tooFar = %d\n", allCount, crossCount, biasCount, twoNNNoCount, probCount, invalidCount, tooFarCount);
+	printf("SMMD_acc = %lf\n", (double)correctCount / (double)allCount);
 }
 
 void evalSMM()
@@ -1333,10 +1387,25 @@ void baseline(vector<SampleType>& testDataSet, vector<int>& prediction)
 		}
 		else
 		{
-			if (SMMD::distM_signed(nearEdges[0]->r_fig, testData.x) > 0) // <0 北京 >0新加坡
-				prediction.push_back(nearEdges[0]->id);
-			else
+			if (nearEdges[0]->r_fig.size() == 0 && nearEdges[1]->r_fig.size() == 0)
+			{
+				prediction.push_back(0);
+			}
+			else if (nearEdges[0]->r_fig.size() == 0 && nearEdges[1]->r_fig.size() != 0)
+			{
 				prediction.push_back(nearEdges[1]->id);
+			}
+			else if (nearEdges[1]->r_fig.size() == 0 && nearEdges[0]->r_fig.size() != 0)
+			{
+				prediction.push_back(nearEdges[0]->id);
+			}
+			else
+			{
+				if (SMMD::distM_signed(nearEdges[0]->r_fig, testData.x) > 0) // <0 北京 >0新加坡
+					prediction.push_back(nearEdges[0]->id);
+				else
+					prediction.push_back(nearEdges[1]->id);
+			}			
 		}
 	}
 }
@@ -1375,7 +1444,175 @@ double evaluate(vector<SampleType>& testDataSet, vector<int>& prediction)
 	}
 	return (double)correct / (double)all;
 }
-///
+
+void shiftMap(double deltaXM, double deltaYM)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///对edge->figure进行平移
+	//////////////////////////////////////////////////////////////////////////
+	
+	for (int i = 0; i < roadNetwork.edges.size(); i++)
+	{
+		Edge* edge = roadNetwork.edges[i];
+		if (edge == NULL)
+			continue;
+		for each (GeoPoint* pt in *edge->figure)
+		{
+			pt->lat += deltaYM / GeoPoint::geoScale;
+			pt->lon += deltaXM / GeoPoint::geoScale;
+		}
+	}
+	roadNetwork.createGridIndex();
+	cout << "shift map finished" << endl;
+}
+
+void trembleMap(double rangeM)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///对figure进行扰动
+	//////////////////////////////////////////////////////////////////////////
+
+	for (int i = 0; i < roadNetwork.edges.size(); i++)
+	{
+		Edge* edge = roadNetwork.edges[i];
+		if (edge == NULL)
+			continue;
+		Figure::iterator iter = edge->figure->begin();
+		iter++; //顶点不要动
+		//double deltaX = (((double)rand() / (double)RAND_MAX) * 2 - 1) * rangeM;
+		//double deltaY = (((double)rand() / (double)RAND_MAX) * 2 - 1) * rangeM;
+		for (; iter != edge->figure->end(); iter++)
+		{
+			if ((*iter) == edge->figure->back())
+			continue;
+			(*iter)->lat += (((double)rand() / (double)RAND_MAX) * 2 - 1) * rangeM / GeoPoint::geoScale;
+			(*iter)->lon += (((double)rand() / (double)RAND_MAX) * 2 - 1) * rangeM / GeoPoint::geoScale;
+		}
+		/*{
+			if ((*iter) == edge->figure->back())
+				continue;
+			(*iter)->lat += deltaY / GeoPoint::geoScale;
+			(*iter)->lon += deltaX / GeoPoint::geoScale;
+		}*/
+	}
+	roadNetwork.createGridIndex();
+	cout << "shift map finished" << endl;
+}
+
+void check_r_hat()
+{
+	//check r_hat
+	for (int i = 0; i < roadNetwork.edges.size(); i++)
+	{
+		if (roadNetwork.edges[i] == NULL || roadNetwork.edges[i]->r_hat.size() == 0)
+			continue;
+		int index = 0;
+		Figure::iterator iter = roadNetwork.edges[i]->figure->begin();
+		if (roadNetwork.edges[i]->figure->size() != roadNetwork.edges[i]->r_hat.size()) //size check
+		{
+			cout << "check 1: size error!" << endl;
+			printf("edgeId = %d, figSize = %d, r_hat size = %d\n", i, roadNetwork.edges[i]->figure->size(), roadNetwork.edges[i]->r_hat.size());
+			system("pause");
+		}
+		if (roadNetwork.edges[i]->r_fig.size() != roadNetwork.edges[i]->r_hat.size())
+		{
+			printf("r_fig size = %d, r_hat size = %d\n", roadNetwork.edges[i]->r_fig.size(), roadNetwork.edges[i]->r_hat.size());
+			system("pause");
+		}
+		
+		
+		for (; iter != roadNetwork.edges[i]->figure->end(); iter++)
+		{
+			GeoPoint* pt = *iter;
+			if (abs(pt->lat - roadNetwork.edges[i]->r_hat[index]->lat) > eps || abs(pt->lon - roadNetwork.edges[i]->r_hat[index]->lon) > eps)
+			{
+				//printf("something wrong with r_hat\n");
+				cout << "figure ";
+				pt->print();
+				cout << "r_hat ";
+				roadNetwork.edges[i]->r_hat[index]->print();
+				system("pause");
+			}
+			index++;
+		}
+	}
+	cout << "check_r_hat clear" << endl;
+}
+
+vector<int> remapper;
+void reMap(list<GeoPoint*>& trainDataSet, list<GeoPoint*>& testDataSet)
+{
+	remapper.clear();
+	vector<int> allOldLabels;
+	for each (GeoPoint* pt in trainDataSet)
+	{
+		allOldLabels.push_back(pt->mmRoadId);
+	}
+	for each (GeoPoint* pt in testDataSet)
+	{
+		allOldLabels.push_back(pt->mmRoadId);
+	}
+	sort(allOldLabels.begin(), allOldLabels.end());
+	
+	for (int i = 0; i < roadNetwork.edges.size(); i++)
+	{
+		remapper.push_back(-1);
+	}
+	int preOldLabel = -1;
+	int currentNewLabel = 0;
+	for (int i = 0; i < allOldLabels.size(); i++)
+	{
+		if (allOldLabels[i] != preOldLabel)
+		{
+			remapper[allOldLabels[i]] = currentNewLabel;
+			currentNewLabel++;
+		}	
+		preOldLabel = allOldLabels[i];
+	}
+	cout << "共有" << currentNewLabel << "个新label"<< endl;
+	system("pause");
+	
+}
+
+void genCSV(list<GeoPoint*>& dataset, string featureFileName, string labelFileName)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///输出成csv文件供python调用
+	///feature文件行数对应feature维度，列数对应sample个数
+	///label文件就一列
+	//////////////////////////////////////////////////////////////////////////
+	ofstream featureOFS(featureFileName);
+	ofstream labelOFS(labelFileName);
+	featureOFS << fixed << showpoint << setprecision(8);
+	labelOFS << fixed << showpoint << setprecision(8);
+	
+	list<GeoPoint*>::iterator iter = dataset.begin();
+	for (; iter != dataset.end(); iter++)
+	{
+		if ((*iter) == dataset.back())
+			featureOFS << (*iter)->lat << endl;
+		else
+			featureOFS << (*iter)->lat << ",";
+	}
+	iter = dataset.begin();
+	for (; iter != dataset.end(); iter++)
+	{
+		if ((*iter) == dataset.back())
+			featureOFS << (*iter)->lon << endl;
+		else
+			featureOFS << (*iter)->lon << ",";
+	}
+	featureOFS.close();
+	
+	iter = dataset.begin();
+	for (; iter != dataset.end(); iter++)
+	{
+		labelOFS << remapper[(*iter)->mmRoadId]<< endl;
+	}
+	labelOFS.close();
+	cout << "输出csv文件成功" << endl;
+}
+
 void main()
 {
 	
@@ -1393,35 +1630,56 @@ void main()
 	roadNetwork.openOld(mapFileFolder, gridWidth);
 	roadNetwork.loadPolylines(fakeCenterlineFilePath);
 	//roadNetwork.open("D:\\trajectory\\beijing_data\\beijing_map\\new\\", gridWidth);
+
+	//将figure复制到r_hat与r_fig，其中r_fig可以变化，来进行对baseline影响的实验
 	for (int i = 0; i < roadNetwork.edges.size(); i++)
 	{
-		if (roadNetwork.edges[i] == NULL)
+		if (roadNetwork.edges[i] == NULL || roadNetwork.edges[i]->r_hat.size() == 0)
 			continue;
+		roadNetwork.edges[i]->r_fig.clear();
+		roadNetwork.edges[i]->r_hat.clear();
 		for each (GeoPoint* figurePt in *roadNetwork.edges[i]->figure)
 		{
-			roadNetwork.edges[i]->r_fig.push_back(figurePt);
+			GeoPoint* r_fig_pt = new GeoPoint(figurePt->lat, figurePt->lon);
+			GeoPoint* r_hat_pt = new GeoPoint(figurePt->lat, figurePt->lon);
+			roadNetwork.edges[i]->r_fig.push_back(r_fig_pt);
+			roadNetwork.edges[i]->r_hat.push_back(r_hat_pt);
 		}
 	}
+		
+	//shiftMap(5000.0, 5000.0);
 
 	md.setArea(&area);
 	md.setResolution(8000);
 	md.newBitmap();
 	md.lockBits();
 	
-	loadTestData(-1);// INF, true);
+	//loadTestData(-1);// INF, true);
 	
-	roadNetwork.drawMap(Color::Blue, md);
-	roadNetwork.ptIndex.drawGridLine(Color::Green, md);
+	//roadNetwork.drawMap(Color::Blue, md);
+	//roadNetwork.ptIndex.drawGridLine(Color::Green, md);
 
 	
 	/**********************************************************/
 	/*test code starts from here*/
-	trainSMM(25.0, 300000);
+	noiseScaleM = 0;
+	int trainCount = 30000;
+	int testCount = 10000;
+	loadSMMTestData(trainCount, testCount, testDataSet, testSMMDataSet);
+	trainSMM(25.0, trainCount);
+	reMap(trainDataSet, testSMMDataSet);
+	genCSV(testSMMDataSet, "testFeature.csv", "testLabel.csv");
+	genCSV(trainDataSet, "trainFeature.csv", "trainLabel.csv");
+	return;
+	check_r_hat();
+
 	evalSMMD_new(testDataSet);
 	/*test code ends*/
 	/**********************************************************/
 	
-
+	//trembleMap(50.0);
+	roadNetwork.drawMap(Color::Blue, md);
+	roadNetwork.ptIndex.drawGridLine(Color::Green, md);
 	if (0)
 	{
 		vector<int> ans_knn;

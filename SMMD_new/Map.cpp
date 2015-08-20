@@ -546,14 +546,14 @@ void Map::getNearEdges(double lat, double lon, int k, vector<Edge*>& dest)
 	if (row1 < 0) row1 = 0;
 	if (row1 >= gridHeight)
 	{
-		cout << "越界" << endl;
+		cout << "越界@Map::getNearEdges" << endl;
 		system("pause");
 	}
 	if (row2 >= gridHeight) row2 = gridHeight - 1;
 	if (col1 < 0) col1 = 0;
 	if (col1 >= gridWidth)
 	{
-		cout << "越界" << endl;
+		cout << "越界@Map::getNearEdges" << endl;
 		system("pause");
 	}
 	if (col2 >= gridWidth) col2 = gridWidth - 1;
