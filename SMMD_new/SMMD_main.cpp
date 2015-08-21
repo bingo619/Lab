@@ -738,6 +738,12 @@ void loadSMMTestData(int trainCount, int testCount, vector<SampleType>& tests, l
 	tests.clear();
 	for each (GeoPoint* pt in testSMMDataSet)
 	{
+		//注意到有时候在边界的点会匹配到一条不在area中的道路上，这样的sample要丢掉
+		//但是testSMMDataSet中没有丢掉，如果需要直接用testSMMDataSet里面的数据做测试，则需要手动丢弃
+		if (roadNetwork.edges[pt->mmRoadId] == NULL)
+		{
+			continue;
+		}
 		tests.push_back(SampleType(pt, NULL, pt->mmRoadId));
 	}
 }
@@ -1539,10 +1545,16 @@ void check_r_hat()
 	cout << "check_r_hat clear" << endl;
 }
 
-vector<int> remapper;
+vector<int> mapper_OldToNew;
+vector<int> mapper_NewToOld;
 void reMap(list<GeoPoint*>& trainDataSet, list<GeoPoint*>& testDataSet)
 {
-	remapper.clear();
+	//////////////////////////////////////////////////////////////////////////
+	///对label进行重新映射，映射成连续标号，从0开始标
+	//////////////////////////////////////////////////////////////////////////
+	
+	mapper_OldToNew.clear();
+	mapper_NewToOld.clear();
 	vector<int> allOldLabels;
 	for each (GeoPoint* pt in trainDataSet)
 	{
@@ -1556,22 +1568,25 @@ void reMap(list<GeoPoint*>& trainDataSet, list<GeoPoint*>& testDataSet)
 	
 	for (int i = 0; i < roadNetwork.edges.size(); i++)
 	{
-		remapper.push_back(-1);
+		mapper_OldToNew.push_back(-1);
 	}
 	int preOldLabel = -1;
 	int currentNewLabel = 0;
 	for (int i = 0; i < allOldLabels.size(); i++)
 	{
+		if (roadNetwork.edges[allOldLabels[i]] == NULL) //注意到有时候在边界的点会匹配到一条不在area中的道路上，这样的sample要丢掉
+			continue;		
 		if (allOldLabels[i] != preOldLabel)
 		{
-			remapper[allOldLabels[i]] = currentNewLabel;
+			mapper_OldToNew[allOldLabels[i]] = currentNewLabel;
+			mapper_NewToOld.push_back(allOldLabels[i]);
 			currentNewLabel++;
-		}	
+		}
 		preOldLabel = allOldLabels[i];
 	}
 	cout << "共有" << currentNewLabel << "个新label"<< endl;
-	system("pause");
-	
+	cout << "mapper_newtoold.size = " << mapper_NewToOld.size() << endl;
+	system("pause");	
 }
 
 void genCSV(list<GeoPoint*>& dataset, string featureFileName, string labelFileName)
@@ -1589,6 +1604,8 @@ void genCSV(list<GeoPoint*>& dataset, string featureFileName, string labelFileNa
 	list<GeoPoint*>::iterator iter = dataset.begin();
 	for (; iter != dataset.end(); iter++)
 	{
+		if (roadNetwork.edges[(*iter)->mmRoadId] == NULL)
+			continue;
 		if ((*iter) == dataset.back())
 			featureOFS << (*iter)->lat << endl;
 		else
@@ -1597,17 +1614,39 @@ void genCSV(list<GeoPoint*>& dataset, string featureFileName, string labelFileNa
 	iter = dataset.begin();
 	for (; iter != dataset.end(); iter++)
 	{
+		if (roadNetwork.edges[(*iter)->mmRoadId] == NULL)
+			continue;
 		if ((*iter) == dataset.back())
 			featureOFS << (*iter)->lon << endl;
 		else
 			featureOFS << (*iter)->lon << ",";
 	}
+
+	//这个for输出测试样本到每条候选路的dist
+	//将这个for注释掉后则只输出二维坐标feature
+	for (int i = 0; i < mapper_NewToOld.size(); i++)
+	{
+		iter = dataset.begin();
+		for (; iter != dataset.end(); iter++)
+		{
+			if (roadNetwork.edges[(*iter)->mmRoadId] == NULL)
+				continue;
+			double dist = roadNetwork.distM((*iter)->lat, (*iter)->lon, roadNetwork.edges[mapper_NewToOld[i]]);
+			if ((*iter) == dataset.back())
+				featureOFS << dist << endl;
+			else
+				featureOFS << dist << ",";
+		}
+	}
+	
 	featureOFS.close();
 	
 	iter = dataset.begin();
 	for (; iter != dataset.end(); iter++)
 	{
-		labelOFS << remapper[(*iter)->mmRoadId]<< endl;
+		if (roadNetwork.edges[(*iter)->mmRoadId] == NULL)
+			continue;
+		labelOFS << mapper_OldToNew[(*iter)->mmRoadId]<<endl;
 	}
 	labelOFS.close();
 	cout << "输出csv文件成功" << endl;
@@ -1646,7 +1685,7 @@ void main()
 			roadNetwork.edges[i]->r_hat.push_back(r_hat_pt);
 		}
 	}
-		
+
 	//shiftMap(5000.0, 5000.0);
 
 	md.setArea(&area);
