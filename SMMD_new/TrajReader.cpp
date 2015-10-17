@@ -1,5 +1,5 @@
 /* 
- * Last Updated at [2015/2/13 13:14] by wuhao
+ * Last Updated at [2015/9/29 9:55] by wuhao
  */
 #include "TrajReader.h"
 
@@ -26,7 +26,7 @@ void TrajReader::readTrajs(vector<Traj*>& dest, int count /* = INF */)
 {
 	//////////////////////////////////////////////////////////////////////////
 	///格式(每一行):time lat lon mmRoadId
-	///轨迹结束：-1 单独占一行
+	///轨迹结束：一个负数 单独占一行
 	///轨迹长度为1的会丢弃
 	//////////////////////////////////////////////////////////////////////////
 	dest.clear();
@@ -48,7 +48,7 @@ void TrajReader::readTrajs(vector<Traj*>& dest, int count /* = INF */)
 		{
 			break;
 		}
-		if (time == -1)
+		if (time < 0)
 		{
 			isStart = true;
 			if (tmpTraj != NULL && tmpTraj->size() > 1)
@@ -83,7 +83,7 @@ void TrajReader::readTrajs(list<Traj*>& dest, int count /* = INF */)
 {
 	//////////////////////////////////////////////////////////////////////////
 	///格式(每一行):time lat lon mmRoadId
-	///轨迹结束：-1 单独占一行
+	///轨迹结束：一个负数 单独占一行
 	///轨迹长度为1的会丢弃
 	//////////////////////////////////////////////////////////////////////////
 	dest.clear();
@@ -109,7 +109,7 @@ void TrajReader::readTrajs(list<Traj*>& dest, int count /* = INF */)
 		{
 			break;
 		}
-		if (time == -1)
+		if (time < 0)
 		{
 			isStart = true;
 			if (tmpTraj != NULL && tmpTraj->size() > 1)
@@ -144,7 +144,8 @@ void TrajReader::readGeoPoints(list<GeoPoint*>& dest, Area* area/* = NULL */, in
 {
 	//////////////////////////////////////////////////////////////////////////
 	///格式(每一行):time lat lon mmRoadId
-	///轨迹结束：-1 单独占一行 //此行不读
+	///轨迹结束：一个负数 单独占一行 //此行不读
+	///For SMM/SMMD 不读mmroadid=-1的
 	//////////////////////////////////////////////////////////////////////////
 	dest.clear();
 	cout << ">> start reading GeoPoints" << endl;
@@ -163,7 +164,7 @@ void TrajReader::readGeoPoints(list<GeoPoint*>& dest, Area* area/* = NULL */, in
 		{
 			break;
 		}
-		if (time == -1)
+		if (time < 0)
 			continue;
 		else
 		{
@@ -173,8 +174,11 @@ void TrajReader::readGeoPoints(list<GeoPoint*>& dest, Area* area/* = NULL */, in
 				if (area->inArea(lat, lon))
 				{
 					GeoPoint* pt = new GeoPoint(lat, lon, time, mmRoadId);
-					dest.push_back(pt);
-					currentCount++;
+					if (mmRoadId != -1)
+					{
+						dest.push_back(pt);
+						currentCount++;
+					}
 				}
 				else
 					continue;
@@ -182,8 +186,11 @@ void TrajReader::readGeoPoints(list<GeoPoint*>& dest, Area* area/* = NULL */, in
 			else
 			{
 				GeoPoint* pt = new GeoPoint(lat, lon, time, mmRoadId);
-				dest.push_back(pt); //area = NULL, 不限制区域全部读入
-				currentCount++;
+				if (mmRoadId != -1)
+				{
+					dest.push_back(pt); //area = NULL, 不限制区域全部读入
+					currentCount++;
+				}
 			}
 		}
 		if (currentCount % 10000 == 0 && currentCount > 0)

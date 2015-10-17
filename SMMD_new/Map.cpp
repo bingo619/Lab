@@ -469,7 +469,7 @@ void Map::getNearEdges(double lat, double lon, double threshold, vector<Edge*>& 
 	//////////////////////////////////////////////////////////////////////////
 	if (!inArea(lat, lon))
 	{
-		printf("[异常](%lf, %lf)不在区域内 in func Map::getNearEdges(double lat, double lon, double threshold, vector<Edge*>& dest)\n");
+		printf("[异常](%lf, %lf)不在区域内 in func Map::getNearEdges(double lat, double lon, double threshold, vector<Edge*>& dest)\n", lat, lon);
 	}
 	dest.clear();
 	vector<Edge*> fail;
@@ -1106,12 +1106,22 @@ void Map::drawMap(Gdiplus::Color color, MapDrawer& md, bool drawInternalPts /* =
 			continue;
 		Figure::iterator ptIter = edges[i]->figure->begin(), nextPtIter = ptIter;
 		nextPtIter++;
-		//Gdiplus::Color rndColor = randomColor();
+		//draw edgeId
+		int deltaX = 2 * ((double)rand() / (double)RAND_MAX - 0.5) * 50;
+		int deltaY = 2 * ((double)rand() / (double)RAND_MAX - 0.5) * 50;
+
+		Gdiplus::Color rndColor = MapDrawer::randomColor();
+		/*if (edges[i]->id == 43086)//49773)
+			rndColor = Gdiplus::Color::Red;
+		else
+			rndColor = Gdiplus::Color::Black;*/
+		Gdiplus::Point screenCoord = md.geoToScreen(edges[i]->figure->front()->lat, edges[i]->figure->front()->lon);
+		//md.drawInt(rndColor, screenCoord.X + deltaX, screenCoord.Y + deltaY, edges[i]->id);
 		while (1)
 		{
 			if (nextPtIter == edges[i]->figure->end())
 				break;
-			md.drawLine(color, (*ptIter)->lat, (*ptIter)->lon, (*nextPtIter)->lat, (*nextPtIter)->lon);
+			md.drawBoldLine(rndColor, (*ptIter)->lat, (*ptIter)->lon, (*nextPtIter)->lat, (*nextPtIter)->lon);
 			if (drawInternalPts)
 			{
 				md.drawBigPoint(Gdiplus::Color::Black, (*ptIter)->lat, (*ptIter)->lon);

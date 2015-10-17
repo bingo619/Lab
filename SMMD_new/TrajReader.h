@@ -1,7 +1,8 @@
 /* 
- * Last Updated at [2015/8/16 10:00] by wuhao
- * version 2.1.1
- * comments:将自动关闭文件提出至成员函数 @2015/8/16  
+ * Last Updated at [2015/9/56 9:56] by wuhao
+ * version 2.1.2
+ * comments:将读取轨迹结束为-1改成为可读任意负数 @2015/9/29
+ *			将自动关闭文件提出至成员函数 @2015/8/16  
  *			增加读入读出GeoPoint功能 @2015/2/13
  */
 #pragma once

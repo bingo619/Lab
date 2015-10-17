@@ -10,15 +10,17 @@
 using namespace std;
 using namespace Gdiplus;
 
-string mapFolder = "D:\\trajectory\\singapore_data\\singapore_map\\old\\";
+//string mapFolder = "D:\\trajectory\\singapore_data\\singapore_map\\old\\";
+string mapFolder = "D:\\trajectory\\Porto_data\\map\\partial\\";
 string inputFolder;
 Map roadNetwork;
 MapMatcher mm(&roadNetwork);
 MapDrawer md;
 //Area area(1.294788, 1.393593, 103.784667, 103.906266); //test
-Area area(1.094788, 1.593593, 103.484667, 104.206266); //singapore full
+//Area area(1.094788, 1.593593, 103.484667, 104.206266); //singapore full
+Area area(41.1393, 41.1607, -8.6325, -8.5962); //porto dense area
 list<Traj*> trajs;
-int currentId = 0;
+int currentId = 1;
 
 //最短路径所用
 #define INF  1e7 
@@ -32,7 +34,7 @@ void initialization()
 	double gridSizeM = 50.0;
 	int gridWidth = (area.maxLon - area.minLon) * GeoPoint::geoScale / gridSizeM;
 	roadNetwork.setArea(&area);
-	roadNetwork.openOld(mapFolder, gridWidth);
+	roadNetwork.open(mapFolder, gridWidth);
 
 	dist = vector<double>(roadNetwork.nodes.size());
 	flag = vector<bool>(roadNetwork.nodes.size());
@@ -246,6 +248,26 @@ void matchForOneFile(string filePath, int fileId)
 	TrajReader reader(filePath);
 	reader.readTrajs(trajs);
 	
+	//check
+	
+	/**********************************************************/
+	/*test code starts from here*/
+	for each (Traj* traj in trajs)
+	{
+		for each (GeoPoint* pt in *traj)
+		{
+			if (!area.inArea(pt->lat, pt->lon))
+			{
+				printf("not in area");
+				pt->print();
+				system("pause");
+			}
+		}
+	}
+	/*test code ends*/
+	/**********************************************************/
+	
+
 	for each(Traj* traj in trajs)
 	{
 		matchForOneTraj(oldOFS, newOFS, traj, mm);
@@ -282,9 +304,9 @@ void forEXE(int argc, char* argv[])
 void forDebug()
 {
 	initialization();
-
-	TrajReader reader("1.txt");
-	reader.readTrajs(trajs);// , 10000);
+	string trajFilePath = "D:\\trajectory\\Porto_data\\TrajsInDA.txt";
+	//TrajReader reader();
+	//reader.readTrajs(trajs);// , 10000);
 
 
 	md.setArea(&area);
@@ -295,9 +317,9 @@ void forDebug()
 	/*for each(Traj* traj in trajs)
 	{
 		TrajDrawer::drawOneTraj(traj, md, Color::Blue);
-		matchForOneTraj(oldOFS, newOFS, traj, mm);
+		//matchForOneTraj(oldOFS, newOFS, traj, mm);
 	}*/
-	matchForOneFile("1.txt", 1);
+	matchForOneFile(trajFilePath, 1);
 	md.unlockBits();
 	md.saveBitmap("1.png");
 }
@@ -305,6 +327,6 @@ void forDebug()
 
 int main(int argc, char* argv[])
 {
-	forEXE(argc, argv);
-	//forDebug();
+	//forEXE(argc, argv);
+	forDebug();
 }

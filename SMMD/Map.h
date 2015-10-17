@@ -150,7 +150,7 @@ public:
 
 	PointGridIndex ptIndex;
 
-private:
+//private:
 	int gridWidth, gridHeight;
 	double gridSizeDeg;
 	double strictThreshold = 0;

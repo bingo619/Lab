@@ -1,9 +1,10 @@
-/* 
- * Last Updated at [2015/2/13 13:12] by wuhao
- * version 2.0.2
- * comments:修改readTrajs读入vector的函数 @2015/3/19
- *			增加读入读出GeoPoint功能 @2015/2/13
- */
+/*
+* Last Updated at [2015/9/56 9:56] by wuhao
+* version 2.1.2
+* comments:将读取轨迹结束为-1改成为可读任意负数 @2015/9/29
+*			将自动关闭文件提出至成员函数 @2015/8/16
+*			增加读入读出GeoPoint功能 @2015/2/13
+*/
 #pragma once
 #include <iostream>
 #include <fstream>
@@ -23,9 +24,10 @@ public:
 	TrajReader();
 	TrajReader(string filePath); //构造函数时就打开轨迹文件 
 	void open(string filePath); //打开轨迹文件，轨迹文件路径为filePath
-	void readTrajs(vector<Traj*>& dest, int count = INF); //读入count条轨迹放入dest(dest会先清空)，默认为全部读入，并关闭文件
-	void readTrajs(list<Traj*>& dest, int count = INF); //读入count条轨迹放入dest(dest会先清空)，默认为全部读入。并关闭文件
-	void readGeoPoints(list<GeoPoint*>& dest, Area* area = NULL, int count = INF); //读入在area内的count个GeoPoint(dest会先清空)，默认为area = NULL表示不限制区域，全部读入, 并关闭文件
+	void readTrajs(vector<Traj*>& dest, int count = INF); //读入count条轨迹放入dest(dest会先清空)，默认为全部读入，不关闭文件
+	void readTrajs(list<Traj*>& dest, int count = INF); //读入count条轨迹放入dest(dest会先清空)，默认为全部读入。不关闭文件
+	void readGeoPoints(list<GeoPoint*>& dest, Area* area = NULL, int count = INF); //读入在area内的count个GeoPoint(dest会先清空)，默认为area = NULL表示不限制区域，全部读入, 不关闭文件
+	void close();
 
 	static void outputTrajs(list<Traj*>& trajs, string filePath, int count = INF); //将trajs内count条轨迹按照标准格式输出至filePath
 	static void outputPts(list<GeoPoint*>& pts, string filePath, int count = INF); //将pts内count个点按照标准格式输出至filePath

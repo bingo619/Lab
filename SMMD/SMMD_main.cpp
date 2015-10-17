@@ -19,10 +19,10 @@ using namespace Gdiplus;
 
 string workspaceFolder = "D:\\trajectory\\singapore_data\\experiments\\SMMD\\";
 string testDataFolder = workspaceFolder + "testData\\";
-string trainDataFolder = workspaceFolder + "trainData\\beijing\\";
+//string trainDataFolder = workspaceFolder + "trainData\\beijing\\";
+string trainDataFolder = workspaceFolder + "trainData\\";
 
-
-int datasetID = 1;
+int datasetID = 3;
 string trainDataPath = trainDataFolder + "area" + StringOperator::intToString(datasetID) +"_50m.txt"; // +"area1_50m.txt";
 string testDataPath = testDataFolder + "testData3_area" + StringOperator::intToString(datasetID) +".txt";// "testData_area1.txt";
 //string testDataPath = testDataFolder + "testData3.txt";
@@ -32,11 +32,12 @@ string priorFilePath = trainDataFolder + "SMMD_prior3.txt";
 
 //Area area(1.342433, 1.353236, 103.864837, 103.875921); //area1
 //Area area(1.3290, 1.3444, 103.8377, 103.8598); //area2
-//Area area(1.3280, 1.3947, 103.8245, 103.9114); //area3
+Area area(1.3280, 1.3947, 103.8245, 103.9114); //area3
 //Area area(1.22, 1.5, 103.62, 104); //singapore half
 //Area area(39.398073, 40.366082, 115.770605, 117.079043); //beijing full
-Area area(40.0310, 40.0764, 116.4001, 116.4710); //beijing area1
+//Area area(40.0310, 40.0764, 116.4001, 116.4710); //beijing area1
 //Area area(39.9308, 40.0168, 116.3042, 116.4228); //beijing area2
+//Area area(39.9651, 39.9899, 116.3711, 116.4134); //beijing area3
 /*double minLat = 1.22;
 double maxLat = 1.5;
 double minLon = 103.620;
@@ -52,6 +53,8 @@ MapDrawer md;
 vector<SampleType> testDataSet;
 
 void loadTestData(int count  = INF, bool draw = false );
+void shiftMap(double deltaXM, double deltaYM);
+void trembleMap(double rangeM);
 
 void trans(int i, ofstream& ofs)
 {
@@ -307,8 +310,22 @@ void trainSMM(double intervalM, int count = INF)
 	//trainer.loadPrior(priorFilePath);
 	//roadNetwork.loadPolylines(polylineFilePath);
 	roadNetwork.loadPolylines(fakeCenterlineFilePath);
+
 	trainer.trainSimple(intervalM);
 	cout << "参数训练完成" << endl;
+}
+
+void trainSMM_with_shift_tremble(double intervalM, int count = INF)
+{
+	trainer.loadTrainData(trainDataPath, count);
+	//trainer.loadPrior(priorFilePath);
+	//roadNetwork.loadPolylines(polylineFilePath);
+	roadNetwork.loadPolylines(fakeCenterlineFilePath);
+	//shiftMap(50.0, 50.0);
+	trembleMap(45.0);
+	trainer.trainSimple(intervalM);
+	cout << "参数训练完成" << endl;
+	
 }
 
 void trainSMMD(double intervalM, int count = INF)
@@ -332,7 +349,7 @@ void trainSMMD(double intervalM, int count = INF)
 	cout << "参数训练完成" << endl;
 }
 
-void evalSMMD(vector<SampleType>& tests)
+void evalSMMD(vector<SampleType>& tests, vector<SampleType>& outTestSamples)
 {
 	//system("pause");
 	double (SMMD::* pFunc)(Edge*, GeoPoint*, GeoPoint*); //一个类成员函数指针变量pFunc的定义
@@ -369,6 +386,7 @@ void evalSMMD(vector<SampleType>& tests)
 	int probCount = 0;
 	int twoNNNoCount = 0;
 	int invalidCount = 0;
+	int oneNNCount = 0;
 
 	int smmCorrectCount = 0;
 
@@ -466,7 +484,8 @@ void evalSMMD(vector<SampleType>& tests)
 		if (abs(roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[1]) - roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[0])) > eps)
 		{
 			allCount--;
-			//biasCount++;
+			oneNNCount++;
+
 			continue;
 		}
 
@@ -490,7 +509,209 @@ void evalSMMD(vector<SampleType>& tests)
 		
 
 		//只留下高概率的
-		if (ratio >=2)
+		if (ratio >=1)
+		{
+			if (testData.rId == ans)
+				correctCount++;
+			if (testData.rId == ans_smm)
+				smmCorrectCount++;
+		}
+		else
+		{
+			allCount--;
+			probCount++;
+			continue;
+		}
+
+		md.drawBigPoint(Color::Red, testData.x->lat, testData.x->lon);
+
+		//将存活下的测试样例输出到outTestSamples
+		outTestSamples.push_back(SampleType(testData.x, testData.d, testData.rId));
+
+		//base line
+		int ans_b;
+		if (SMMD::distM_signed(nearEdges[0], testData.x) < 0) // <0 北京 >0新加坡
+			ans_b = nearEdges[0]->id;
+		else
+			ans_b = nearEdges[1]->id;
+		/*if (abs(roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[1]) - roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[0])) > eps)
+		{
+			ans_b = nearEdges[0]->id;
+		}*/
+
+		if (testData.rId == ans_b)
+			baselineCorrectCount++;
+		else
+			md.drawBigPoint(Color::Black, testData.x->lat, testData.x->lon);
+		
+
+		//if (testData.rId == smmd.doSMMD(testData.x, testData.d, pFunc))
+		//	correctCount++;
+	}
+	printf("SMMD_acc = %lf\n", (double)correctCount / (double)allCount);
+	if (smmdSwitch)
+		printf("SMM_acc = %lf\n", (double)smmCorrectCount / (double)allCount);
+	printf("base_acc = %lf\n", (double)baselineCorrectCount / (double)allCount);
+	printf("base_correctCount = %d, allCount = %d\n", baselineCorrectCount, allCount);
+	printf("SMMDcorrectCount = %d, allCount = %d\n", correctCount, allCount);
+	printf("cross = %d, bias = %d, 1NN = %d, 2NN = %d, prob = %d, invalid = %d\n", crossCount, biasCount, oneNNCount, twoNNNoCount, probCount, invalidCount);
+}
+
+void evalSMMD_no2NNConstraint(vector<SampleType>& tests)
+{
+	//system("pause");
+	double (SMMD::* pFunc)(Edge*, GeoPoint*, GeoPoint*); //一个类成员函数指针变量pFunc的定义
+
+
+	bool smmdSwitch = false;
+	if (smmdSwitch)
+	{
+		pFunc = &SMMD::prob_Simple;
+	}
+	else
+	{
+		pFunc = &SMMD::probSMM;
+		//构造SMM testData
+		list <GeoPoint*> testSMMDataSet;
+		TrajReader tReader(trainDataPath);
+		tReader.readGeoPoints(testSMMDataSet, &area, 100000);
+		tests.clear();
+		for each (GeoPoint* pt in testSMMDataSet)
+		{
+			tests.push_back(SampleType(pt, NULL, pt->mmRoadId));
+		}
+	}
+	cout << "test sample size = " << tests.size() << endl;
+
+
+	SMMD smmd(roadNetwork);
+	int baselineCorrectCount = 0;
+	int correctCount = 0;
+	int allCount = tests.size();
+
+	int crossCount = 0;
+	int biasCount = 0;
+	int probCount = 0;
+	int twoNNNoCount = 0;
+	int invalidCount = 0;
+	int oneNNCount = 0;
+
+	int smmCorrectCount = 0;
+
+	for (int i = 0; i < tests.size(); i++)
+	{
+		if (i % 1000 == 0)
+			cout << i << endl;
+		SampleType testData = tests[i];
+		
+		/**********************************************************/
+		/*test code starts from here*/
+
+		if (testData.rId == 48067)
+		{
+			allCount--;
+			continue;
+			md.drawBigPoint(Color::Black, testData.x->lat, testData.x->lon);
+		}
+		/*test code ends*/
+		/**********************************************************/
+		if (testData.rId == -1)
+		{
+			allCount--;
+			continue;
+		}
+
+		if (roadNetwork.edges[testData.rId] == NULL)
+		{
+			allCount--;
+			continue;
+		}
+
+		if (roadNetwork.edges[testData.rId]->r_hat.size() == 0 || roadNetwork.distM(testData.x->lat, testData.x->lon, roadNetwork.edges[testData.rId]) >= 50.0)
+		{
+			allCount--;
+			invalidCount++;
+			//md.drawBigPoint(Color::Black, testData.x->lat, testData.x->lon);
+			continue;
+		}
+
+		/*int slotId = roadNetwork.edges[testData.rId]->getSlotId(testData.x);
+		if (abs(roadNetwork.edges[testData.rId]->thetas[slotId].mu) < 5)
+		{
+		allCount--;
+		continue;
+		}*/
+		/*
+		if (abs(roadNetwork.edges[testData.rId]->u) > 5)
+		{
+		allCount--;
+		continue;
+		}*/
+
+		//滤去路口测试数据点
+		vector<GeoPoint*> oneNN;
+		roadNetwork.ptIndex.kNN(testData.x, 1, 100.0, oneNN);
+		if (GeoPoint::distM(oneNN[0], testData.x) < -50.0)
+		{
+			allCount--;
+			crossCount++;
+			continue;
+		}
+
+		vector<Edge*> nearEdges;
+		roadNetwork.getNearEdges(testData.x->lat, testData.x->lon, 2, nearEdges);
+		if (nearEdges[1] == NULL || nearEdges[0] == NULL)
+		{
+			system("pause");
+		}
+		if (nearEdges[0]->r_hat.size() == 0 || nearEdges[1]->r_hat.size() == 0)
+		{
+			allCount--;
+			continue;
+		}
+
+		//偏的不厉害的排除
+		int slotId0 = nearEdges[0]->getSlotId(testData.x);
+		int slotId1 = nearEdges[1]->getSlotId(testData.x);
+		if (abs(roadNetwork.edges[testData.rId]->thetas[slotId0].mu - roadNetwork.edges[testData.rId]->thetas[slotId1].mu) < 0)
+		{
+			allCount--;
+			biasCount++;
+			continue;
+		}
+
+		//如果最近的就一条
+		if (abs(roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[1]) - roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[0])) > eps)
+		{
+			allCount--;
+			oneNNCount++;
+
+			continue;
+		}
+
+		double ratio;
+		int ans;
+		int ans_smm;
+		if (smmdSwitch)
+		{
+			ratio = smmd.prob_Simple(nearEdges[0], testData.x, testData.d) / smmd.prob_Simple(nearEdges[1], testData.x, testData.d);
+			ans = smmd.prob_Simple(nearEdges[0], testData.x, testData.d) > smmd.prob_Simple(nearEdges[1], testData.x, testData.d) ? nearEdges[0]->id : nearEdges[1]->id;
+			ans_smm = smmd.probSMM(nearEdges[0], testData.x, testData.d) > smmd.probSMM(nearEdges[1], testData.x, testData.d) ? nearEdges[0]->id : nearEdges[1]->id;
+		}
+		else
+		{
+			ratio = smmd.probSMM(nearEdges[0], testData.x, testData.d) / smmd.probSMM(nearEdges[1], testData.x, testData.d);
+			ans = smmd.probSMM(nearEdges[0], testData.x, testData.d) > smmd.probSMM(nearEdges[1], testData.x, testData.d) ? nearEdges[0]->id : nearEdges[1]->id;
+
+			ans = smmd.doSMMD(testData.x, testData.d, pFunc);
+		}
+
+		if (ratio < 1)
+			ratio = 1 / ratio;
+
+
+		//只留下高概率的
+		if (ratio >= 1)
 		{
 			if (testData.rId == ans)
 				correctCount++;
@@ -508,15 +729,20 @@ void evalSMMD(vector<SampleType>& tests)
 
 		//base line
 		int ans_b;
-		if (SMMD::distM_signed(nearEdges[0], testData.x) < 0) // <0 北京 >0新加坡
+		if (SMMD::distM_signed(nearEdges[0], testData.x) > 0) // <0 北京 >0新加坡
 			ans_b = nearEdges[0]->id;
 		else
 			ans_b = nearEdges[1]->id;
+		/*if (abs(roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[1]) - roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[0])) > eps)
+		{
+		ans_b = nearEdges[0]->id;
+		}*/
+
 		if (testData.rId == ans_b)
 			baselineCorrectCount++;
 		else
 			md.drawBigPoint(Color::Black, testData.x->lat, testData.x->lon);
-		
+
 
 		//if (testData.rId == smmd.doSMMD(testData.x, testData.d, pFunc))
 		//	correctCount++;
@@ -527,7 +753,103 @@ void evalSMMD(vector<SampleType>& tests)
 	printf("base_acc = %lf\n", (double)baselineCorrectCount / (double)allCount);
 	printf("base_correctCount = %d, allCount = %d\n", baselineCorrectCount, allCount);
 	printf("SMMDcorrectCount = %d, allCount = %d\n", correctCount, allCount);
-	printf("cross = %d, bias = %d, 2NN = %d, prob = %d, invalid = %d\n", crossCount, biasCount, twoNNNoCount, probCount, invalidCount);
+	printf("cross = %d, bias = %d, 1NN = %d, 2NN = %d, prob = %d, invalid = %d\n", crossCount, biasCount, oneNNCount, twoNNNoCount, probCount, invalidCount);
+}
+
+void evalSMMD_no_Selection(vector<SampleType>& tests)
+{
+	double (SMMD::* pFunc)(Edge*, GeoPoint*, GeoPoint*); //一个类成员函数指针变量pFunc的定义
+
+
+	bool smmdSwitch = false;
+	if (smmdSwitch)
+	{
+		pFunc = &SMMD::prob_Simple;
+	}
+	else
+	{
+		pFunc = &SMMD::probSMM;
+	}
+	cout << "test sample size = " << tests.size() << endl;
+
+
+	SMMD smmd(roadNetwork);
+	int baselineCorrectCount = 0;
+	int correctCount = 0;
+	int allCount = tests.size();
+
+	int crossCount = 0;
+	int biasCount = 0;
+	int probCount = 0;
+	int twoNNNoCount = 0;
+	int invalidCount = 0;
+	int oneNNCount = 0;
+
+	int smmCorrectCount = 0;
+
+	for (int i = 0; i < tests.size(); i++)
+	{
+		if (i % 1000 == 0)
+			cout << i << endl;
+		SampleType testData = tests[i];
+
+
+		vector<Edge*> nearEdges;
+		roadNetwork.getNearEdges(testData.x->lat, testData.x->lon, 2, nearEdges);
+		if (nearEdges[1] == NULL || nearEdges[0] == NULL)
+		{
+			system("pause");
+		}
+
+
+		double ratio;
+		int ans;
+		int ans_smm;
+		if (smmdSwitch)
+		{
+			ratio = smmd.prob_Simple(nearEdges[0], testData.x, testData.d) / smmd.prob_Simple(nearEdges[1], testData.x, testData.d);
+			ans = smmd.prob_Simple(nearEdges[0], testData.x, testData.d) > smmd.prob_Simple(nearEdges[1], testData.x, testData.d) ? nearEdges[0]->id : nearEdges[1]->id;
+			ans_smm = smmd.probSMM(nearEdges[0], testData.x, testData.d) > smmd.probSMM(nearEdges[1], testData.x, testData.d) ? nearEdges[0]->id : nearEdges[1]->id;
+		}
+		else
+		{
+			ratio = smmd.probSMM(nearEdges[0], testData.x, testData.d) / smmd.probSMM(nearEdges[1], testData.x, testData.d);
+			ans = smmd.probSMM(nearEdges[0], testData.x, testData.d) > smmd.probSMM(nearEdges[1], testData.x, testData.d) ? nearEdges[0]->id : nearEdges[1]->id;
+			//printf("ans_predict = %d, ans = %d\n", ans, testData.rId);
+			//system("pause");
+		}
+
+
+		md.drawBigPoint(Color::Red, testData.x->lat, testData.x->lon);
+
+		//base line
+		int ans_b;
+		if (SMMD::distM_signed(nearEdges[0], testData.x) > 0) // <0 北京 >0新加坡
+			ans_b = nearEdges[0]->id;
+		else
+			ans_b = nearEdges[1]->id;
+		/*if (abs(roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[1]) - roadNetwork.distM(testData.x->lat, testData.x->lon, nearEdges[0])) > eps)
+		{
+		ans_b = nearEdges[0]->id;
+		}*/
+
+		if (testData.rId == ans_b)
+			baselineCorrectCount++;
+		else
+			md.drawBigPoint(Color::Black, testData.x->lat, testData.x->lon);
+
+		if (testData.rId == ans)
+			correctCount++;
+		//if (testData.rId == smmd.doSMMD(testData.x, testData.d, pFunc))
+		//	correctCount++;
+	}
+	printf("SMMD_acc = %lf\n", (double)correctCount / (double)allCount);
+	if (smmdSwitch)
+		printf("SMM_acc = %lf\n", (double)smmCorrectCount / (double)allCount);
+	printf("base_acc = %lf\n", (double)baselineCorrectCount / (double)allCount);
+	printf("base_correctCount = %d, allCount = %d\n", baselineCorrectCount, allCount);
+	printf("SMMDcorrectCount = %d, allCount = %d\n", correctCount, allCount);
+	printf("cross = %d, bias = %d, 1NN = %d, 2NN = %d, prob = %d, invalid = %d\n", crossCount, biasCount, oneNNCount, twoNNNoCount, probCount, invalidCount);
 }
 
 void evalSMMD_2(vector<SampleType>& tests)
@@ -1054,7 +1376,7 @@ void baseline2_SMM()
 void genCenterline()
 {
 	trainer.loadTrainData(trainDataPath);
-	trainer.genFakeCenterline("fakeCenterline2.txt");
+	trainer.genFakeCenterline("fakeCenterline3.txt");
 	//draw	
 	for each (GeoPoint* pt in trainer.trainDataSet)
 	{
@@ -1328,6 +1650,94 @@ void getBeijingArea()
 	md.saveBitmap("beijing.png");
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+void BAD(vector<SampleType>& testDataSet)
+{
+	int correctCount = 0;
+	for each(SampleType testData in testDataSet)
+	{
+		vector<Edge*> nearEdges;
+		roadNetwork.getNearEdges(testData.x->lat, testData.x->lon, 2, nearEdges);
+		int ans_b;
+		double phi0 = SMMD::cosAngle(roadNetwork.nodes[nearEdges[0]->startNodeId], roadNetwork.nodes[nearEdges[0]->endNodeId], testData.d);
+		double phi1 = SMMD::cosAngle(roadNetwork.nodes[nearEdges[1]->startNodeId], roadNetwork.nodes[nearEdges[1]->endNodeId], testData.d);
+		//if (phi0 > phi1)
+		if ((double)rand() / (double)RAND_MAX > 0.5)
+			ans_b = nearEdges[0]->id;
+		else
+			ans_b = nearEdges[1]->id;
+		if (testData.rId == ans_b)
+			correctCount++;
+	}
+	printf("BAD accuracy = %lf\n", (double)correctCount / (double)testDataSet.size());
+}
+
+void shiftMap(double deltaXM, double deltaYM)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///对edge->figure进行平移
+	//////////////////////////////////////////////////////////////////////////
+
+	for (int i = 0; i < roadNetwork.edges.size(); i++)
+	{
+		Edge* edge = roadNetwork.edges[i];
+		if (edge == NULL)
+			continue;
+		for each (GeoPoint* pt in *edge->figure)
+		{
+			pt->lat += deltaYM / GeoPoint::geoScale;
+			pt->lon += deltaXM / GeoPoint::geoScale;
+		}
+		for each (GeoPoint* pt in edge->r_hat)
+		{
+			pt->lat += deltaYM / GeoPoint::geoScale;
+			pt->lon += deltaXM / GeoPoint::geoScale;
+		}
+	}
+	roadNetwork.createGridIndex();
+	cout << "shift map finished" << endl;
+}
+
+void trembleMap(double rangeM)
+{
+	//////////////////////////////////////////////////////////////////////////
+	///对figure进行扰动
+	//////////////////////////////////////////////////////////////////////////
+
+	for (int i = 0; i < roadNetwork.edges.size(); i++)
+	{
+		Edge* edge = roadNetwork.edges[i];
+		if (edge == NULL)
+			continue;
+		Figure::iterator iter = edge->figure->begin();
+		vector<GeoPoint*>::iterator iter_r = edge->r_hat.begin();
+		iter_r++;
+		iter++; //顶点不要动
+		//double deltaX = (((double)rand() / (double)RAND_MAX) * 2 - 1) * rangeM;
+		//double deltaY = (((double)rand() / (double)RAND_MAX) * 2 - 1) * rangeM;
+		for (; iter != edge->figure->end(); iter++, iter_r++)
+		{
+			if ((*iter) == edge->figure->back())
+				continue;
+			double deltaLat = (((double)rand() / (double)RAND_MAX) * 2 - 1) * rangeM / GeoPoint::geoScale;
+			double deltaLon = (((double)rand() / (double)RAND_MAX) * 2 - 1) * rangeM / GeoPoint::geoScale;
+			(*iter)->lat += deltaLat;
+			(*iter)->lon += deltaLon;
+			(*iter_r)->lat += deltaLat;
+			(*iter_r)->lon += deltaLon;
+		}
+		/*{
+		if ((*iter) == edge->figure->back())
+		continue;
+		(*iter)->lat += deltaY / GeoPoint::geoScale;
+		(*iter)->lon += deltaX / GeoPoint::geoScale;
+		}*/
+	}
+	roadNetwork.createGridIndex();
+	cout << "tremble map finished" << endl;
+}
+
 void main()
 {
 	
@@ -1341,14 +1751,16 @@ void main()
 	double gridSizeM = 50.0;
 	int gridWidth = (area.maxLon - area.minLon) * GeoPoint::geoScale / gridSizeM;
 	roadNetwork.setArea(&area);
-	//roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\old\\", gridWidth);
-	roadNetwork.open("D:\\trajectory\\beijing_data\\beijing_map\\new\\", gridWidth);
+	roadNetwork.openOld("D:\\trajectory\\singapore_data\\singapore_map\\old\\", gridWidth);
+	//roadNetwork.open("D:\\trajectory\\beijing_data\\beijing_map\\new\\", gridWidth);
+	//roadNetwork.open("D:\\trajectory\\beijing_data\\beijing_map\\new20151015\\", gridWidth);
 
 	//genCenterline();
+	//return;
 	//filterTrainData();
 	//filterTestData();
 
-
+	
 	md.setArea(&area);
 	md.setResolution(8000);
 	md.newBitmap();
@@ -1356,8 +1768,7 @@ void main()
 	//testForDistM();
 	//return;
 	
-	//loadTestData(INF);// INF, true);
-	roadNetwork.drawMap(Color::Blue, md);
+	//loadTestData(50000);// INF, true);
 	//genSMMDPrior(testDataSet);
 
 	//trainSMMD();
@@ -1399,8 +1810,11 @@ void main()
 	/*test code ends*/
 	/**********************************************************/
 	
-
-	trainSMM(50.0, 300000);
+	//BAD(testDataSet);
+	//return
+	//genCenterline();
+	trainSMM(25.0, 400000);
+	roadNetwork.drawMap(Color::Blue, md);
 	
 	//trainSMMD(fakeCenterlineFilePath, 1000000);
 
@@ -1408,7 +1822,10 @@ void main()
 	//drawTrainData(trainDataFolder + "area3_50m.txt");
 	//evalSMMD(4);
 	//baseline2_SMMD();
-	evalSMMD(testDataSet);
+	vector<SampleType> testForRobust;
+	evalSMMD(testDataSet,testForRobust);
+	trainSMM_with_shift_tremble(25.0, 400000);
+	evalSMMD_no_Selection(testForRobust);
 	//evalSMM();
 	//cout << testForP();
 	//filterTrainData();

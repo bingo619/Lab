@@ -102,6 +102,9 @@ void Trainer::trainOneRoad_GaussianParam(Edge* r, list<GeoPoint*>& pts)
 	{
 		list<GeoPoint*> emptyList;
 		slots.push_back(emptyList);
+		//顺带初始化thetas
+		r->thetas[i].mu = 0;
+		r->thetas[i].sigma = 0.5;
 	}
 	for each(GeoPoint* pt in pts)
 	{
@@ -121,7 +124,7 @@ void Trainer::trainOneRoad_GaussianParam(Edge* r, list<GeoPoint*>& pts)
 		{
 			mu /= slots[i].size();
 			r->thetas[i].mu = mu;
-			double sigma = 0; //标准差
+			double sigma = 1; //标准差
 			for each(GeoPoint* pt in slots[i])
 			{
 				double dist = SMMD::distM_signed(r, pt);

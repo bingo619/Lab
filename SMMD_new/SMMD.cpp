@@ -53,7 +53,9 @@ int SMMD::doSMMD(GeoPoint* x, GeoPoint* d, double(SMMD::*p)(Edge*, GeoPoint*, Ge
 	//roadNetwork->getNearEdges(x->lat, x->lon, thresholdM, candidateRoads);
 	roadNetwork->getNearEdges(x->lat, x->lon, 5, candidateRoads);
 	
-	double maxProb = -1;
+	double maxProb_1st = -1;
+	double maxProb_2nd = -1;
+	int firstId = -1;
 	int returnId = -1;
 
 	if (candidateRoads.size() <= 0)
@@ -61,17 +63,40 @@ int SMMD::doSMMD(GeoPoint* x, GeoPoint* d, double(SMMD::*p)(Edge*, GeoPoint*, Ge
 		cout << "candidate size = " << candidateRoads.size() << endl;
 		system("pause");
 	}
+	//find 1st
 	for each(Edge* r in candidateRoads)
 	{
 		if (r->r_hat.size() == 0)
 			continue;
 		double tempProb = (this->*p)(r, x, d);
-		if (tempProb > maxProb)
+		if (tempProb > maxProb_1st)
 		{
-			maxProb = tempProb;
-			returnId = r->id;
+			maxProb_1st = tempProb;
+			firstId = r->id;
 		}
 	}
+	//find 2nd
+	int secondId = -1;
+	for each(Edge* r in candidateRoads)
+	{
+		if (r->r_hat.size() == 0)
+			continue;
+		double tempProb = (this->*p)(r, x, d);
+		if (tempProb > maxProb_2nd && secondId != firstId)
+		{
+			maxProb_2nd = tempProb;
+			secondId = r->id;
+		}
+	}
+	if (abs(maxProb_1st - maxProb_2nd) < eps)
+	{
+		if ((double)rand() / (double)RAND_MAX > 0.5) // 随机一条
+			returnId = firstId;
+		else
+			returnId = secondId;
+	}
+	else
+		returnId = firstId;
 	return returnId;
 }
 
@@ -102,6 +127,11 @@ double SMMD::likelihood_d(Edge* r, GeoPoint* d)
 	//////////////////////////////////////////////////////////////////////////
 	///计算p(d|r)
 	//////////////////////////////////////////////////////////////////////////
+	if (roadNetwork->nodes[r->startNodeId] == NULL || roadNetwork->nodes[r->endNodeId] == NULL || d == NULL)
+	{
+		cout << "null" << endl;
+		system("pause");
+	}
 	double phi = cosAngle(roadNetwork->nodes[r->startNodeId], roadNetwork->nodes[r->endNodeId], d);
 	//printf("phi = %lf\n", acos(phi) / PI * 180);
 	//cout << gamma_d / (exp(gamma_d) - exp(-gamma_d)) * exp(gamma_d * phi) << endl;

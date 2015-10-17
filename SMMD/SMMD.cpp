@@ -18,7 +18,7 @@ int SMMD::doSMMD(GeoPoint* x, GeoPoint* d, double (SMMD::*p)(Edge*, GeoPoint*, G
 	
 	//roadNetwork->getNearEdges(x->lat, x->lon, thresholdM, candidateRoads);
 
-	roadNetwork->getNearEdges(x->lat, x->lon, 2, candidateRoads);
+	roadNetwork->getNearEdges(x->lat, x->lon, 4, candidateRoads);
 	if (candidateRoads[1] == NULL || candidateRoads[0] == NULL)
 	{
 		system("pause");

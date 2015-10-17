@@ -1,6 +1,6 @@
-/* 
- * Last Updated at [2015/3/19 12:03] by wuhao
- */
+/*
+* Last Updated at [2015/9/29 9:55] by wuhao
+*/
 #include "TrajReader.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -26,7 +26,7 @@ void TrajReader::readTrajs(vector<Traj*>& dest, int count /* = INF */)
 {
 	//////////////////////////////////////////////////////////////////////////
 	///格式(每一行):time lat lon mmRoadId
-	///轨迹结束：-1 单独占一行
+	///轨迹结束：一个负数 单独占一行
 	///轨迹长度为1的会丢弃
 	//////////////////////////////////////////////////////////////////////////
 	dest.clear();
@@ -42,17 +42,13 @@ void TrajReader::readTrajs(vector<Traj*>& dest, int count /* = INF */)
 		{
 			break;
 		}
-		if (currentCount % 10000 == 0 && currentCount > 0)
-		{
-			printf("read %d trajs\n", currentCount++);
-		}
 		int time;
 		trajIfs >> time;
 		if (trajIfs.fail())
 		{
 			break;
 		}
-		if (time == -1)
+		if (time < 0)
 		{
 			isStart = true;
 			if (tmpTraj != NULL && tmpTraj->size() > 1)
@@ -79,15 +75,15 @@ void TrajReader::readTrajs(vector<Traj*>& dest, int count /* = INF */)
 		}
 	}
 	cout << ">> reading trajs finished" << endl;
-	cout << dest.size() << " trajs in all" << endl;
-	trajIfs.close();
+	cout << dest.size() << "trajs in all" << endl;
+	//trajIfs.close();
 }
 
 void TrajReader::readTrajs(list<Traj*>& dest, int count /* = INF */)
 {
 	//////////////////////////////////////////////////////////////////////////
 	///格式(每一行):time lat lon mmRoadId
-	///轨迹结束：-1 单独占一行
+	///轨迹结束：一个负数 单独占一行
 	///轨迹长度为1的会丢弃
 	//////////////////////////////////////////////////////////////////////////
 	dest.clear();
@@ -113,7 +109,7 @@ void TrajReader::readTrajs(list<Traj*>& dest, int count /* = INF */)
 		{
 			break;
 		}
-		if (time == -1)
+		if (time < 0)
 		{
 			isStart = true;
 			if (tmpTraj != NULL && tmpTraj->size() > 1)
@@ -141,14 +137,14 @@ void TrajReader::readTrajs(list<Traj*>& dest, int count /* = INF */)
 	}
 	cout << ">> reading trajs finished" << endl;
 	cout << dest.size() << " trajs in all" << endl;
-	trajIfs.close();
+	//trajIfs.close();
 }
 
 void TrajReader::readGeoPoints(list<GeoPoint*>& dest, Area* area/* = NULL */, int count /* = INF */)
 {
 	//////////////////////////////////////////////////////////////////////////
 	///格式(每一行):time lat lon mmRoadId
-	///轨迹结束：-1 单独占一行 //此行不读
+	///轨迹结束：一个负数 单独占一行 //此行不读
 	//////////////////////////////////////////////////////////////////////////
 	dest.clear();
 	cout << ">> start reading GeoPoints" << endl;
@@ -167,11 +163,11 @@ void TrajReader::readGeoPoints(list<GeoPoint*>& dest, Area* area/* = NULL */, in
 		{
 			break;
 		}
-		if (time == -1)
+		if (time < 0)
 			continue;
 		else
 		{
-			trajIfs >> lat >> lon >> mmRoadId;			
+			trajIfs >> lat >> lon >> mmRoadId;
 			if (area != NULL)
 			{
 				if (area->inArea(lat, lon))
@@ -197,6 +193,11 @@ void TrajReader::readGeoPoints(list<GeoPoint*>& dest, Area* area/* = NULL */, in
 	}
 	cout << ">> reading GeoPoints finished" << endl;
 	cout << dest.size() << " GeoPoints in all" << endl;
+	//trajIfs.close();
+}
+
+void TrajReader::close()
+{
 	trajIfs.close();
 }
 
